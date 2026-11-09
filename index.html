@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HHKT3D - Giải Toán & Thiết Kế Hình Học 3D (Tích Hợp GeoGebra)</title>
+    <!-- Giao diện Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện Toán học KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <!-- Thư viện 3D Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Thư viện GeoGebra Classic chính thức -->
+    <script src="https://www.geogebra.org/apps/deployggb.js"></script>
+    <!-- Thư viện Xuất file Word (.docx) và PDF (.pdf) chạy Client-side -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { background-color: #0b0f19; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+        .label-3d {
+            position: absolute; color: #38bdf8; font-weight: bold; font-size: 15px;
+            pointer-events: none; text-shadow: 0 0 6px #000, 0 0 3px #000;
+        }
+        .feature-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 28px -6px rgba(14, 165, 233, 0.28);
+        }
+        .feature-card-purple:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 28px -6px rgba(168, 85, 247, 0.3);
+        }
+        #ggb-element {
+            width: 100%;
+            height: 100%;
+        }
+        /* Bộ lọc chuyển nền trắng của GeoGebra sang nền đen #0b0f19 sắc nét và giữ nguyên màu sắc hình vẽ */
+        .ggb-dark-ui {
+            filter: invert(0.93) hue-rotate(180deg) contrast(1.05);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+    <!-- Thông báo nổi (Toast) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Thanh tiêu đề (Header) -->
+    <header class="h-14 border-b border-gray-800 px-4 sm:px-6 flex items-center justify-between bg-[#0f172a] shrink-0 z-20">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="showHome()">
+            <div class="px-2.5 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xs text-white shadow-lg shadow-blue-500/30">HHKT</div>
+            <div>
+                <h1 class="font-bold text-base text-white leading-tight">HHKT3D</h1>
+                <p class="text-[11px] text-gray-400 hidden sm:block">Giải Toán & Thiết Kế Hình Học Không Gian 3D Với AI + GeoGebra</p>
+            </div>
+        </div>
+
+        <!-- Cụm nút chuyển nhanh giữa các chức năng khi đang ở trong Workspace -->
+        <div id="headerNavTabs" class="hidden md:flex items-center gap-1.5 bg-gray-900/90 p-1 rounded-xl border border-gray-800">
+            <button id="tabBtnSolver" onclick="openTextSolver()" class="text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-gray-300 hover:text-white">
+                📝 Giải Toán 3D
+            </button>
+            <button id="tabBtnGeoGebra" onclick="openGeoGebraDesigner()" class="text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-gray-300 hover:text-white">
+                📐 Thiết kế hình học (GeoGebra)
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button id="backHomeBtn" onclick="showHome()" class="hidden text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 transition flex items-center gap-1.5">
+                🏠 Về Trang Chủ
+            </button>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-yellow-400 hidden sm:inline">🔑 API Key:</span>
+                <input id="apiKeyInput" type="password" oninput="localStorage.setItem('gemini_key', this.value)" placeholder="Dán Gemini API Key vào đây..." class="bg-gray-900 border border-gray-700 text-xs px-3 py-2 rounded-lg w-44 sm:w-60 text-white focus:outline-none focus:border-blue-500">
+            </div>
+        </div>
+    </header>
+
+    <!-- MÀN HÌNH TRANG CHỦ -->
+    <div id="homeView" class="flex-1 overflow-y-auto bg-[#0b0f19] flex items-center justify-center relative p-6">
+        <div class="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/15 blur-[120px] rounded-full"></div>
+        <div class="max-w-4xl w-full relative z-10 text-center my-auto py-4">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-950/80 border border-blue-800/70 text-cyan-400 text-xs font-semibold mb-4">
+                ✨ Trợ Lý Toán Hình Học Không Gian THPT Với AI & GeoGebra Classic
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
+                Ứng dụng <span class="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-400 bg-clip-text text-transparent">HHKT3D</span>
+            </h1>
+            <p class="text-gray-300 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-8">
+                Công cụ hỗ trợ học sinh và giáo viên giải các bài toán Hình học không gian THPT kết hợp dựng mô hình 3D tương tác trực quan, tự động chuyển đổi nét liền – nét đứt và tích hợp trực tiếp bộ công cụ <strong>GeoGebra Classic</strong>.
+            </p>
+
+            <p class="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 text-center">
+                👇 Chọn một chức năng bên dưới để bắt đầu
+            </p>
+
+            <!-- Lưới 2 mục chức năng chính ở Trang chủ -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
+                <!-- Mục 1: Giải Toán Từ Đề Bài Văn Bản -->
+                <div onclick="openTextSolver()" class="feature-card cursor-pointer rounded-2xl bg-[#0f172a] border border-gray-800 hover:border-cyan-400 p-6 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                📝
+                            </div>
+                            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-950 text-cyan-400 border border-blue-800">
+                                Giải Toán AI & 3D
+                            </span>
+                        </div>
+                        <h2 class="text-lg font-bold text-white group-hover:text-cyan-400 transition mb-2">
+                            Giải Toán Từ Đề Bài Văn Bản
+                        </h2>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Nhập đề bài toán hình học không gian bằng chữ, chọn đề mẫu hoặc dán ảnh chụp đề bài. AI sẽ phân tích lời giải chi tiết từng bước, dựng mô hình 3D tự động ẩn/hiện nét đứt và trải phẳng 2D (Net).
+                        </p>
+                    </div>
+                    <div class="mt-5 pt-3.5 border-t border-gray-800 flex items-center justify-between text-xs text-cyan-400 font-semibold">
+                        <span>Mở không gian giải toán & dựng hình</span>
+                        <span class="group-hover:translate-x-1.5 transition text-base">→</span>
+                    </div>
+                </div>
+
+                <!-- Mục 2: Thiết kế hình học (Tích hợp GeoGebra Classic) -->
+                <div onclick="openGeoGebraDesigner()" class="feature-card feature-card-purple cursor-pointer rounded-2xl bg-[#0f172a] border border-gray-800 hover:border-purple-400 p-6 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                📐
+                            </div>
+                            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-950/90 text-purple-300 border border-purple-800">
+                                Tích hợp GeoGebra Classic
+                            </span>
+                        </div>
+                        <h2 class="text-lg font-bold text-white group-hover:text-purple-400 transition mb-2">
+                            Thiết kế hình học
+                        </h2>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Tích hợp trọn bộ công cụ <strong>GeoGebra Classic</strong> (Vẽ hình phẳng 2D, Hình học không gian 3D, Đại số, CAS, Bảng tính, Đo góc, Thể tích, Giao tuyến). Hỗ trợ đồng bộ hình từ bài giải AI và dựng hình GeoGebra bằng lệnh AI.
+                        </p>
+                    </div>
+                    <div class="mt-5 pt-3.5 border-t border-gray-800 flex items-center justify-between text-xs text-purple-400 font-semibold">
+                        <span>Mở phòng thiết kế GeoGebra Classic</span>
+                        <span class="group-hover:translate-x-1.5 transition text-base">→</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH 1: GIẢI TOÁN & DỰNG HÌNH 3D TỰ ĐỘNG -->
+    <div id="workspaceView" class="flex-1 flex overflow-hidden hidden">
+        <!-- Cột trái: Nhập đề bài & Tải ảnh -->
+        <div class="w-1/3 max-w-md border-r border-gray-800 p-4 flex flex-col gap-3 bg-[#0f172a] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-sm text-blue-400">📝 Nhập Đề Bài</span>
+                <select id="modelSelect" class="text-xs bg-blue-950 text-blue-400 px-2 py-1 rounded border border-blue-800 focus:outline-none">
+                    <option value="gemini-2.5-flash">Tự động (Ưu tiên Flash)</option>
+                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-400 block mb-1">Bài toán mẫu 3D nhanh:</label>
+                <select id="sampleSelect" onchange="loadSample()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500">
+                    <option value="chop_ABCD">Hình chóp S.ABCD đáy hình vuông, SA vuông góc đáy</option>
+                    <option value="chop_ABC">Hình chóp tam giác đều S.ABC</option>
+                </select>
+            </div>
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="text-xs text-gray-400">Nội dung đề bài toán (văn bản):</label>
+                    <button onclick="document.getElementById('problemInput').value=''" class="text-[11px] text-gray-500 hover:text-gray-300">Xóa chữ</button>
+                </div>
+                <textarea id="problemInput" rows="4" placeholder="Nhập đề bài bằng chữ hoặc dán ảnh ở ô bên dưới..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 resize-none">Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a. Tính góc giữa đường thẳng SC và mặt phẳng (ABCD).</textarea>
+            </div>
+            <!-- Ô TẢI ẢNH / DÁN ẢNH (CTRL+V) -->
+            <div class="flex flex-col flex-1 min-h-[150px]">
+                <label class="text-xs text-gray-400 block mb-1">Hoặc upload / dán (Ctrl+V) ảnh chụp đề bài:</label>
+                <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="flex-1 border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl bg-gray-900/60 flex flex-col items-center justify-center p-3 cursor-pointer transition relative overflow-hidden group">
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageFile(this.files[0])">
+                    
+                    <div id="uploadPrompt" class="text-center">
+                        <svg class="w-9 h-9 mx-auto text-gray-500 group-hover:text-blue-400 mb-2 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="text-xs text-gray-300 font-medium">Kéo thả ảnh vào đây hoặc bấm để chọn</p>
+                        <p class="text-[11px] text-gray-500 mt-1">Hỗ trợ PNG, JPG, WEBP hoặc nhấn <span class="text-blue-400 font-semibold">Ctrl+V</span></p>
+                    </div>
+                    <img id="imagePreview" class="hidden max-h-36 object-contain rounded-lg border border-gray-700" />
+                    <button id="removeImgBtn" onclick="removeImage(event)" class="hidden absolute top-2 right-2 bg-red-600/90 hover:bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow">✕ Xóa ảnh</button>
+                </div>
+            </div>
+            <button onclick="solveAndDraw()" id="solveBtn" class="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 transition">
+                ✨ Phân Tích AI & Dựng Hình 3D
+            </button>
+            <button onclick="openGeoGebraAndSync()" class="w-full py-2 rounded-lg bg-purple-950/70 hover:bg-purple-900/80 border border-purple-700/70 text-purple-200 font-medium text-xs transition flex items-center justify-center gap-1.5">
+                📐 Chuyển mô hình này sang Thiết kế GeoGebra
+            </button>
+        </div>
+        <!-- Cột phải: Khung 3D + Lời giải -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="h-[56%] relative bg-[#070a12]" id="canvasContainer">
+                <div class="absolute top-3 right-3 z-10 flex gap-2">
+                    <button onclick="toggleUnfold()" id="unfoldBtn" class="bg-gray-800/90 hover:bg-blue-600 text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-white transition flex items-center gap-1">
+                        📐 Trải phẳng 2D (Net)
+                    </button>
+                    <button onclick="resetCamera()" class="bg-gray-800/90 hover:bg-gray-700 text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-white transition">
+                        🔄 Đặt lại góc nhìn
+                    </button>
+                </div>
+                <div class="absolute bottom-3 left-3 z-10 bg-gray-900/90 px-3 py-1.5 rounded-lg border border-gray-800 text-xs text-gray-300 flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-sky-400 inline-block"></span> Nét nhìn thấy (Tự động theo góc xoay)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 border-b border-dashed border-sky-400 inline-block"></span> Nét đứt (Che khuất / Đường phụ)</span>
+                    <span class="text-gray-500">| 🖱️ Xoay & Thu phóng bằng chuột</span>
+                </div>
+                <div id="labelsContainer"></div>
+            </div>
+            <!-- Khung Lời giải chi tiết -->
+            <div class="flex-1 border-t border-gray-800 bg-[#0b0f19] p-6 overflow-y-auto">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3 mb-4">
+                    <h2 class="text-sm font-bold text-blue-400 flex items-center gap-1.5">
+                        📘 Lời Giải Chi Tiết
+                    </h2>
+                    <!-- Cụm nút Xuất file Word & PDF -->
+                    <div class="flex items-center gap-2">
+                        <button id="exportWordBtn" onclick="exportToWord()" class="text-xs px-3 py-1.5 rounded-lg bg-blue-950/90 hover:bg-blue-800 text-blue-200 border border-blue-700/80 transition flex items-center gap-1.5 font-medium shadow-sm">
+                            📄 Xuất file Word (.docx)
+                        </button>
+                        <button id="exportPdfBtn" onclick="exportToPDF()" class="text-xs px-3 py-1.5 rounded-lg bg-rose-950/90 hover:bg-rose-800 text-rose-200 border border-rose-700/80 transition flex items-center gap-1.5 font-medium shadow-sm">
+                            🔴 Xuất file PDF (.pdf)
+                        </button>
+                    </div>
+                </div>
+                <div id="solutionOutput" class="text-sm leading-relaxed space-y-2 text-gray-200">
+                    <p><strong>Xác định hình chiếu của SC lên (ABCD):</strong></p>
+                    <p>Do $SA \perp (ABCD)$ nên $A$ là hình chiếu vuông góc của $S$ lên mặt phẳng $(ABCD)$.</p>
+                    <p>Do đó, $AC$ chính là hình chiếu vuông góc của $SC$ lên mặt phẳng $(ABCD)$.</p>
+                    <p><strong>Tính góc $\alpha = (SC, (ABCD))$:</strong></p>
+                    <p>Ta có: $(SC, (ABCD)) = (SC, AC) = \widehat{SCA}$.</p>
+                    <p>Vì $ABCD$ là hình vuông cạnh $a$ nên đường chéo $AC = a\sqrt{2}$.</p>
+                    <p>Xét tam giác $SAC$ vuông tại $A$: $\tan \widehat{SCA} = \frac{SA}{AC} = \frac{a}{a\sqrt{2}} = \frac{\sqrt{2}}{2} \Rightarrow \widehat{SCA} \approx 35^\circ 16'$.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH 2: THIẾT KẾ HÌNH HỌC (TÍCH HỢP GEOGEBRA CLASSIC) -->
+    <div id="geogebraView" class="flex-1 flex flex-col overflow-hidden hidden bg-[#0b0f19]">
+        <!-- Thanh công cụ điều khiển GeoGebra nhanh & Trợ lý AI dựng hình -->
+        <div class="bg-[#0f172a] border-b border-gray-800 px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <!-- Chuyển chế độ hiển thị trong GeoGebra Classic -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs font-semibold text-purple-400 mr-1 flex items-center gap-1">
+                    📐 Chế độ GeoGebra:
+                </span>
+                <button onclick="setGgbPerspective('AT')" class="text-xs px-2.5 py-1.5 rounded-lg bg-purple-600/25 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 transition font-medium" title="Đại số & Đồ họa Không gian 3D">
+                    🧊 Không gian 3D
+                </button>
+                <button onclick="setGgbPerspective('AG')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition" title="Đại số & Hình học phẳng 2D">
+                    📏 Hình phẳng 2D & Đại số
+                </button>
+                <button onclick="setGgbPerspective('AC')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition" title="Tính toán biểu thức CAS">
+                    🧮 Giải tích CAS
+                </button>
+                <button onclick="setGgbPerspective('AS')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition" title="Bảng tính & Thống kê">
+                    📊 Bảng tính
+                </button>
+
+                <!-- Chọn mẫu hình 3D dựng sẵn trong GeoGebra -->
+                <select id="ggbPresetSelect" onchange="loadGgbPreset(this.value)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-purple-500 ml-1">
+                    <option value="">-- 🏛️ Mẫu Hình Học Nhanh --</option>
+                    <option value="chop_vuong">Hình chóp S.ABCD (SA ⊥ đáy)</option>
+                    <option value="chop_deu">Hình chóp tứ giác đều S.ABCD</option>
+                    <option value="lang_tru">Lăng trụ tam giác đều ABC.A'B'C'</option>
+                    <option value="mat_cau">Mặt cầu & Mặt phẳng cắt</option>
+                </select>
+
+                <!-- Tùy chọn giao diện Nền Đen / Nền Sáng cho GeoGebra -->
+                <select id="ggbThemeSelect" onchange="setGgbTheme(this.value)" class="text-xs bg-gray-900 border border-purple-700/70 text-purple-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-purple-400">
+                    <option value="dark_full" selected>🌑 Nền Đen (Toàn giao diện)</option>
+                    <option value="dark_canvas">🌌 Nền Đen (Chỉ vùng vẽ 2D/3D)</option>
+                    <option value="light">☀️ Nền Sáng (Mặc định)</option>
+                </select>
+
+                <!-- Nút đồng bộ mô hình từ phần Giải Toán AI sang GeoGebra -->
+                <button onclick="syncActiveModelToGeoGebra()" class="text-xs px-2.5 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/70 transition flex items-center gap-1 font-medium">
+                    🔄 Đồng bộ hình từ Bài Giải AI
+                </button>
+            </div>
+
+            <!-- Thanh AI tạo lệnh dựng hình GeoGebra tự động -->
+            <div class="flex items-center gap-1.5 flex-1 max-w-xl min-w-[280px]">
+                <input id="ggbAiPrompt" type="text" onkeydown="if(event.key==='Enter') generateGgbByAI()" placeholder="Nhập yêu cầu AI dựng trên GeoGebra (VD: Dựng hình chóp đều S.ABCD cạnh 4 cao 5)..." class="flex-1 bg-gray-900 border border-gray-700 text-xs px-3 py-1.5 rounded-lg text-white focus:outline-none focus:border-purple-500">
+                <button id="ggbAiBtn" onclick="generateGgbByAI()" class="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold shrink-0 transition shadow">
+                    ✨ AI Dựng Hình
+                </button>
+                <button onclick="resetGeoGebraCanvas()" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-red-900/70 text-gray-300 hover:text-red-200 border border-gray-700 transition shrink-0" title="Làm mới bảng vẽ GeoGebra">
+                    🗑️ Xóa bảng
+                </button>
+                <button id="toggleGgbModeBtn" onclick="toggleGeoGebraEmbedMode()" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition shrink-0" title="Chuyển đổi giữa GeoGebra API và trang GeoGebra Classic gốc">
+                    🌐 Chế độ Web Gốc
+                </button>
+            </div>
+        </div>
+
+        <!-- Vùng chứa bảng thiết kế GeoGebra Classic (Mặc định nền đen #0b0f19) -->
+        <div id="ggbWrapper" class="flex-1 relative w-full h-full bg-[#0b0f19] overflow-hidden">
+            <!-- Bảng GeoGebra API (hỗ trợ điều khiển tự động & đầy đủ thanh công cụ GeoGebra Classic) -->
+            <div id="ggb-element" class="w-full h-full ggb-dark-ui"></div>
+            <!-- Khung Iframe trực tiếp https://www.geogebra.org/classic (dự phòng hoặc khi người dùng bấm chuyển chế độ) -->
+            <iframe id="ggbIframe" src="about:blank" class="hidden w-full h-full border-0 ggb-dark-ui" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+        </div>
+    </div>
+
+<script>
+    document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_key') || '';
+
+    // --- HÀM HIỂN THỊ THÔNG BÁO NỔI (TOAST) ---
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        const bgClass = type === 'error'
+            ? 'bg-red-950/95 border-red-700 text-red-200'
+            : type === 'success'
+                ? 'bg-emerald-950/95 border-emerald-700 text-emerald-200'
+                : 'bg-slate-900/95 border-blue-700 text-blue-200';
+        toast.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-xl transition-all duration-300 pointer-events-auto ${bgClass}`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // --- CHUYỂN ĐỔI GIỮA TRANG CHỦ, MÀN HÌNH GIẢI TOÁN VÀ THIẾT KẾ HÌNH HỌC GEOGEBRA ---
+    function updateHeaderTabs(activeTab) {
+        const headerTabs = document.getElementById('headerNavTabs');
+        const solverBtn = document.getElementById('tabBtnSolver');
+        const ggbBtn = document.getElementById('tabBtnGeoGebra');
+
+        if (activeTab === 'home') {
+            headerTabs.classList.add('hidden');
+            headerTabs.classList.remove('flex');
+            return;
+        }
+        headerTabs.classList.remove('hidden');
+        headerTabs.classList.add('flex');
+
+        if (activeTab === 'solver') {
+            solverBtn.className = "text-xs px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 bg-blue-600 text-white shadow";
+            ggbBtn.className = "text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-gray-400 hover:text-white";
+        } else if (activeTab === 'geogebra') {
+            ggbBtn.className = "text-xs px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 bg-purple-600 text-white shadow";
+            solverBtn.className = "text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-gray-400 hover:text-white";
+        }
+    }
+
+    function showHome() {
+        document.getElementById('homeView').classList.remove('hidden');
+        document.getElementById('workspaceView').classList.add('hidden');
+        document.getElementById('geogebraView').classList.add('hidden');
+        document.getElementById('backHomeBtn').classList.add('hidden');
+        updateHeaderTabs('home');
+    }
+
+    function openTextSolver() {
+        document.getElementById('homeView').classList.add('hidden');
+        document.getElementById('geogebraView').classList.add('hidden');
+        document.getElementById('workspaceView').classList.remove('hidden');
+        document.getElementById('backHomeBtn').classList.remove('hidden');
+        updateHeaderTabs('solver');
+
+        // Cập nhật lại kích thước khung vẽ 3D ngay khi mở từ trang chủ và đặt con trỏ vào ô nhập đề
+        requestAnimationFrame(() => {
+            if (container.clientWidth && container.clientHeight) {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+            document.getElementById('problemInput').focus();
+        });
+    }
+
+    // --- TÍCH HỢP GEOGEBRA CLASSIC (MỤC "THIẾT KẾ HÌNH HỌC") ---
+    let ggbInitialized = false;
+    let ggbReady = false;
+    let isGgbIframeMode = false;
+    let pendingSyncAfterLoad = false;
+    let currentGgbTheme = 'dark_full';
+
+    // Hàm đổi chế độ nền Đen / Sáng cho GeoGebra Classic
+    function applyGgbCanvasBg(isDarkCanvas) {
+        if (!ggbReady || !window.ggbApplet || isGgbIframeMode) return;
+        const api = window.ggbApplet;
+        try {
+            if (isDarkCanvas) {
+                // Đổi màu nền vùng vẽ 2D và 3D sang màu đen xanh đậm (#0b0f19) bằng lệnh GeoGebra
+                api.evalCommand("SetBackgroundColor(0.04, 0.06, 0.1)");
+                api.evalCommand("SetBackgroundColor(1, 0.04, 0.06, 0.1)");
+                api.evalCommand("SetBackgroundColor(-1, 0.04, 0.06, 0.1)");
+            } else {
+                api.evalCommand("SetBackgroundColor(1, 1, 1)");
+                api.evalCommand("SetBackgroundColor(1, 1, 1, 1)");
+                api.evalCommand("SetBackgroundColor(-1, 1, 1, 1)");
+            }
+        } catch (e) {
+            console.warn("Không thể đổi màu nền vùng vẽ:", e);
+        }
+    }
+
+    function setGgbTheme(themeMode) {
+        currentGgbTheme = themeMode;
+        const ggbEl = document.getElementById('ggb-element');
+        const iframe = document.getElementById('ggbIframe');
+
+        if (themeMode === 'dark_full') {
+            ggbEl.classList.add('ggb-dark-ui');
+            iframe.classList.add('ggb-dark-ui');
+            applyGgbCanvasBg(false);
+            showToast('Đã bật chế độ Nền Đen cho toàn bộ giao diện GeoGebra!');
+        } else if (themeMode === 'dark_canvas') {
+            ggbEl.classList.remove('ggb-dark-ui');
+            iframe.classList.remove('ggb-dark-ui');
+            applyGgbCanvasBg(true);
+            showToast('Đã bật chế độ Nền Đen riêng cho vùng vẽ 2D/3D!');
+        } else {
+            ggbEl.classList.remove('ggb-dark-ui');
+            iframe.classList.remove('ggb-dark-ui');
+            applyGgbCanvasBg(false);
+            showToast('Đã chuyển về giao diện Nền Sáng mặc định.');
+        }
+    }
+
+    function openGeoGebraDesigner() {
+        document.getElementById('homeView').classList.add('hidden');
+        document.getElementById('workspaceView').classList.add('hidden');
+        document.getElementById('geogebraView').classList.remove('hidden');
+        document.getElementById('backHomeBtn').classList.remove('hidden');
+        updateHeaderTabs('geogebra');
+
+        requestAnimationFrame(() => {
+            if (!ggbInitialized) {
+                initGeoGebraClassic();
+            } else {
+                resizeGeoGebraApplet();
+            }
+        });
+    }
+
+    function openGeoGebraAndSync() {
+        pendingSyncAfterLoad = true;
+        openGeoGebraDesigner();
+        if (ggbReady) {
+            pendingSyncAfterLoad = false;
+            syncActiveModelToGeoGebra();
+        }
+    }
+
+    function initGeoGebraClassic() {
+        if (ggbInitialized) return;
+        ggbInitialized = true;
+        const wrapper = document.getElementById('ggbWrapper');
+        const width = wrapper.clientWidth || window.innerWidth;
+        const height = wrapper.clientHeight || (window.innerHeight - 110);
+
+        if (typeof GGBApplet === 'undefined') {
+            // Nếu script deployggb chưa tải kịp, bật trực tiếp khung web GeoGebra Classic
+            enableDirectIframeMode();
+            return;
+        }
+
+        const params = {
+            "appName": "classic",
+            "width": width,
+            "height": height,
+            "showToolBar": true,
+            "showAlgebraInput": true,
+            "showMenuBar": true,
+            "enableRightClick": true,
+            "enableLabelDrags": true,
+            "enableShiftDragZoom": true,
+            "enableCAS": true,
+            "enable3d": true,
+            "language": "vi",
+            "perspective": "AT", // Mở sẵn chế độ Đại số + Không gian 3D
+            "useBrowserForJS": false,
+            "appletOnLoad": function(api) {
+                window.ggbApplet = api;
+                ggbReady = true;
+                resizeGeoGebraApplet();
+                if (currentGgbTheme === 'dark_canvas') {
+                    applyGgbCanvasBg(true);
+                }
+                if (pendingSyncAfterLoad) {
+                    pendingSyncAfterLoad = false;
+                    syncActiveModelToGeoGebra();
+                } else {
+                    loadGgbPreset('chop_vuong', true);
+                }
+            }
+        };
+
+        const applet = new GGBApplet(params, true);
+        applet.inject('ggb-element');
+    }
+
+    function resizeGeoGebraApplet() {
+        if (!ggbReady || !window.ggbApplet || isGgbIframeMode) return;
+        const wrapper = document.getElementById('ggbWrapper');
+        if (wrapper && wrapper.clientWidth > 0 && wrapper.clientHeight > 0) {
+            try {
+                window.ggbApplet.setSize(wrapper.clientWidth, wrapper.clientHeight);
+            } catch (e) {
+                console.warn("Lỗi điều chỉnh kích thước GeoGebra:", e);
+            }
+        }
+    }
+
+    function enableDirectIframeMode() {
+        isGgbIframeMode = true;
+        const ggbEl = document.getElementById('ggb-element');
+        const iframe = document.getElementById('ggbIframe');
+        const btn = document.getElementById('toggleGgbModeBtn');
+        ggbEl.classList.add('hidden');
+        iframe.classList.remove('hidden');
+        if (iframe.src === 'about:blank' || !iframe.src.includes('geogebra.org')) {
+            iframe.src = 'https://www.geogebra.org/classic?lang=vi';
+        }
+        btn.innerText = '⚡ Chế độ Tích Hợp AI';
+        showToast('Đang sử dụng giao diện trang web GeoGebra Classic trực tiếp.');
+    }
+
+    function toggleGeoGebraEmbedMode() {
+        const ggbEl = document.getElementById('ggb-element');
+        const iframe = document.getElementById('ggbIframe');
+        const btn = document.getElementById('toggleGgbModeBtn');
+
+        if (!isGgbIframeMode) {
+            enableDirectIframeMode();
+        } else {
+            isGgbIframeMode = false;
+            iframe.classList.add('hidden');
+            ggbEl.classList.remove('hidden');
+            btn.innerText = '🌐 Chế độ Web Gốc';
+            if (!ggbInitialized) {
+                initGeoGebraClassic();
+            } else {
+                resizeGeoGebraApplet();
+            }
+            showToast('Đã chuyển sang chế độ GeoGebra Tích hợp (hỗ trợ đồng bộ AI & mẫu hình 3D).');
+        }
+    }
+
+    function setGgbPerspective(code) {
+        if (isGgbIframeMode) {
+            showToast('Bạn đang ở Chế độ Web Gốc. Hãy bấm nút "⚡ Chế độ Tích Hợp AI" để điều khiển nhanh.');
+            return;
+        }
+        if (!ggbReady || !window.ggbApplet) {
+            showToast('Đang tải bộ công cụ GeoGebra Classic, vui lòng đợi giây lát...');
+            return;
+        }
+        try {
+            window.ggbApplet.setPerspective(code);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    function resetGeoGebraCanvas() {
+        if (!ggbReady || !window.ggbApplet || isGgbIframeMode) return;
+        window.ggbApplet.reset();
+        if (currentGgbTheme === 'dark_canvas') {
+            applyGgbCanvasBg(true);
+        }
+        document.getElementById('ggbPresetSelect').value = '';
+        showToast('Đã làm mới bảng thiết kế GeoGebra.');
+    }
+
+    // Dựng các mẫu hình học không gian phổ biến trực tiếp trên GeoGebra Classic
+    function loadGgbPreset(presetKey, silent = false) {
+        if (!presetKey || !ggbReady || !window.ggbApplet || isGgbIframeMode) return;
+        const api = window.ggbApplet;
+        try {
+            api.setPerspective("AT");
+            api.reset();
+        } catch (e) {
+            api.reset();
+        }
+        if (currentGgbTheme === 'dark_canvas') {
+            applyGgbCanvasBg(true);
+        }
+
+        const cmds = [];
+        if (presetKey === 'chop_vuong') {
+            cmds.push(
+                "A = (0, 0, 0)",
+                "B = (0, 4, 0)",
+                "C = (4, 4, 0)",
+                "D = (4, 0, 0)",
+                "S = (0, 0, 4)",
+                "day = Polygon(A, B, C, D)",
+                "SAB = Polygon(S, A, B)",
+                "SBC = Polygon(S, B, C)",
+                "SCD = Polygon(S, C, D)",
+                "SDA = Polygon(S, D, A)",
+                "AC = Segment(A, C)",
+                "SetLineStyle(AC, 1)"
+            );
+        } else if (presetKey === 'chop_deu') {
+            cmds.push(
+                "A = (-2, -2, 0)",
+                "B = (2, -2, 0)",
+                "C = (2, 2, 0)",
+                "D = (-2, 2, 0)",
+                "O = (0, 0, 0)",
+                "S = (0, 0, 4)",
+                "day = Polygon(A, B, C, D)",
+                "SAB = Polygon(S, A, B)",
+                "SBC = Polygon(S, B, C)",
+                "SCD = Polygon(S, C, D)",
+                "SDA = Polygon(S, D, A)",
+                "SO = Segment(S, O)",
+                "AC = Segment(A, C)",
+                "BD = Segment(B, D)",
+                "SetLineStyle(SO, 1)",
+                "SetLineStyle(AC, 1)",
+                "SetLineStyle(BD, 1)"
+            );
+        } else if (presetKey === 'lang_tru') {
+            cmds.push(
+                "A = (0, 0, 0)",
+                "B = (4, 0, 0)",
+                "C = (2, 3.46, 0)",
+                "A1 = (0, 0, 4)",
+                "B1 = (4, 0, 4)",
+                "C1 = (2, 3.46, 4)",
+                "dayDuoi = Polygon(A, B, C)",
+                "dayTren = Polygon(A1, B1, C1)",
+                "mat1 = Polygon(A, B, B1, A1)",
+                "mat2 = Polygon(B, C, C1, B1)",
+                "mat3 = Polygon(C, A, A1, C1)"
+            );
+        } else if (presetKey === 'mat_cau') {
+            cmds.push(
+                "I = (0, 0, 2)",
+                "mc = Sphere(I, 3)",
+                "mp = Plane(z = 1)",
+                "gt = IntersectPath(mp, mc)"
+            );
+        }
+
+        cmds.forEach(c => {
+            try { api.evalCommand(c); } catch (err) {}
+        });
+
+        if (!silent) {
+            showToast('Đã dựng mẫu hình 3D trên bảng thiết kế GeoGebra Classic!', 'success');
+        }
+    }
+
+    // Đồng bộ trực tiếp mô hình 3D từ bài toán AI sang GeoGebra Classic
+    function syncActiveModelToGeoGebra() {
+        if (isGgbIframeMode) {
+            toggleGeoGebraEmbedMode();
+        }
+        if (!ggbReady || !window.ggbApplet) {
+            pendingSyncAfterLoad = true;
+            showToast('Đang khởi tạo GeoGebra Classic để đồng bộ mô hình...');
+            return;
+        }
+        if (!activeModel || !activeModel.vertices3D) {
+            showToast('Chưa có dữ liệu mô hình 3D để đồng bộ.', 'error');
+            return;
+        }
+
+        const api = window.ggbApplet;
+        try {
+            api.setPerspective("AT");
+            api.reset();
+        } catch (e) {
+            api.reset();
+        }
+        if (currentGgbTheme === 'dark_canvas') {
+            applyGgbCanvasBg(true);
+        }
+
+        // Chuyển hệ tọa độ Three.js (x, y_cao, z) sang hệ tọa độ 3D của GeoGebra (x, z, y_cao)
+        const verts = activeModel.vertices3D;
+        Object.keys(verts).forEach(k => {
+            const [x, y, z] = verts[k];
+            const cleanName = k.replace(/[^a-zA-Z0-9]/g, '');
+            try {
+                api.evalCommand(`${cleanName} = (${Number(x.toFixed(2))}, ${Number(z.toFixed(2))}, ${Number(y.toFixed(2))})`);
+            } catch (e) {}
+        });
+
+        // Vẽ các mặt đa diện
+        (activeModel.faces || []).forEach((face, idx) => {
+            const pts = face.map(k => k.replace(/[^a-zA-Z0-9]/g, '')).join(', ');
+            try {
+                api.evalCommand(`f${idx} = Polygon(${pts})`);
+            } catch (e) {}
+        });
+
+        // Vẽ các cạnh nét liền
+        (activeModel.edgesSolid || []).forEach(([u, v], idx) => {
+            const p1 = u.replace(/[^a-zA-Z0-9]/g, '');
+            const p2 = v.replace(/[^a-zA-Z0-9]/g, '');
+            try {
+                api.evalCommand(`es${idx} = Segment(${p1}, ${p2})`);
+                api.evalCommand(`SetLineStyle(es${idx}, 0)`);
+            } catch (e) {}
+        });
+
+        // Vẽ các cạnh nét đứt
+        (activeModel.edgesDashed || []).forEach(([u, v], idx) => {
+            const p1 = u.replace(/[^a-zA-Z0-9]/g, '');
+            const p2 = v.replace(/[^a-zA-Z0-9]/g, '');
+            try {
+                api.evalCommand(`ed${idx} = Segment(${p1}, ${p2})`);
+                api.evalCommand(`SetLineStyle(ed${idx}, 1)`);
+            } catch (e) {}
+        });
+
+        showToast('Đã đồng bộ mô hình 3D sang bảng thiết kế GeoGebra Classic!', 'success');
+    }
+
+    // Sử dụng Gemini AI để dịch yêu cầu tiếng Việt thành tập lệnh GeoGebra tự động
+    async function generateGgbByAI() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const promptInput = document.getElementById('ggbAiPrompt').value.trim();
+        const btn = document.getElementById('ggbAiBtn');
+
+        if (!apiKey) {
+            showToast('Bạn hãy dán Gemini API Key vào ô ở góc trên bên phải trước nhé!', 'error');
+            document.getElementById('apiKeyInput').focus();
+            return;
+        }
+        if (!promptInput) {
+            showToast('Hãy nhập yêu cầu hình học bạn muốn dựng trên GeoGebra!', 'info');
+            document.getElementById('ggbAiPrompt').focus();
+            return;
+        }
+        if (isGgbIframeMode) {
+            toggleGeoGebraEmbedMode();
+        }
+        if (!ggbReady || !window.ggbApplet) {
+            showToast('Đang tải GeoGebra Classic, vui lòng thử lại sau 2 giây...');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = '⏳ Đang dựng...';
+
+        try {
+            const aiPrompt = `Bạn là chuyên gia lập trình lệnh GeoGebra Classic (2D và 3D).
+Người dùng yêu cầu: "${promptInput}"
+Hãy trả về DUY NHẤT một mảng JSON chứa các câu lệnh GeoGebra tiếng Anh chuẩn xác để thực thi tuần tự qua hàm ggbApplet.evalCommand().
+Lưu ý:
+- Trong không gian 3D của GeoGebra, mặt phẳng đáy là z = 0, trục chiều cao là Oz: Điểm viết dạng A = (x, y, z).
+- Dùng Polygon(A, B, C, ...), Segment(A, B), Sphere(I, R), Plane(...), Pyramid(...), Prism(...), SetLineStyle(tenDoan, 1) cho nét đứt.
+- Không giải thích dài dòng, chỉ trả về đúng mảng JSON như ví dụ:
+["A = (0,0,0)", "B = (4,0,0)", "C = (4,4,0)", "D = (0,4,0)", "S = (2,2,4)", "Polygon(A,B,C,D)", "Polygon(S,A,B)", "Polygon(S,B,C)", "Polygon(S,C,D)", "Polygon(S,D,A)"]`;
+
+            const data = await callGeminiWithRetry(apiKey, [{ text: aiPrompt }], btn);
+            const rawText = data.candidates[0].content.parts[0].text;
+            const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const commands = JSON.parse(jsonMatch[0]);
+                const api = window.ggbApplet;
+                try { api.reset(); } catch (e) {}
+                if (currentGgbTheme === 'dark_canvas') {
+                    applyGgbCanvasBg(true);
+                }
+                commands.forEach(cmd => {
+                    try { api.evalCommand(cmd); } catch (err) { console.warn("Bỏ qua lệnh:", cmd); }
+                });
+                showToast(`Đã dựng xong ${commands.length} đối tượng trên GeoGebra!`, 'success');
+            } else {
+                showToast('AI chưa tạo được tập lệnh chuẩn, bạn hãy mô tả rõ hơn nhé!', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Lỗi kết nối AI: ' + err.message, 'error');
+        }
+
+        btn.disabled = false;
+        btn.innerText = '✨ AI Dựng Hình';
+    }
+
+    // --- XỬ LÝ NÉN ẢNH VÀ DÁN ẢNH (CTRL+V) ---
+    let uploadedImageBase64 = null;
+    let uploadedImageMime = null;
+    function handleImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxW = 1000;
+                const scale = img.width > maxW ? maxW / img.width : 1;
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                uploadedImageBase64 = dataUrl.split(',')[1];
+                uploadedImageMime = 'image/jpeg';
+                document.getElementById('imagePreview').src = dataUrl;
+                document.getElementById('imagePreview').classList.remove('hidden');
+                document.getElementById('removeImgBtn').classList.remove('hidden');
+                document.getElementById('uploadPrompt').classList.add('hidden');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+    function removeImage(e) {
+        e.stopPropagation();
+        uploadedImageBase64 = null;
+        uploadedImageMime = null;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('imagePreview').classList.add('hidden');
+        document.getElementById('removeImgBtn').classList.add('hidden');
+        document.getElementById('uploadPrompt').classList.remove('hidden');
+    }
+    window.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                handleImageFile(item.getAsFile());
+                break;
+            }
+        }
+    });
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-500'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500');
+        if (e.dataTransfer.files.length) handleImageFile(e.dataTransfer.files[0]);
+    });
+
+    // --- KHỞI TẠO KHÔNG GIAN 3D ---
+    const container = document.getElementById('canvasContainer');
+    const labelsContainer = document.getElementById('labelsContainer');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, (container.clientWidth / container.clientHeight) || (16 / 9), 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setSize(container.clientWidth || 800, container.clientHeight || 450);
+    container.appendChild(renderer.domElement);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    scene.add(new THREE.GridHelper(14, 28, 0x1e3a8a, 0x1e293b));
+
+    let shapeGroup = new THREE.Group();
+    scene.add(shapeGroup);
+    let isUnfolded = false;
+    let currentVertices = {};
+    let labelElements = {};
+
+    // Vật liệu dùng chung cho nét liền, nét đứt và mặt
+    const solidMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+    const dashedMat = new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 0.22, gapSize: 0.16 });
+    const faceMat = new THREE.MeshBasicMaterial({
+        color: 0x0284c7,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+
+    // Danh sách quản lý các cạnh 3D để tự động chuyển đổi nét liền / nét đứt khi xoay camera
+    let dynamicEdges = [];
+    let outerBoundaryFaces = [];
+    let outerTriangles = [];
+
+    const samples = {
+        chop_ABCD: {
+            text: "Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a. Tính góc giữa đường thẳng SC và mặt phẳng (ABCD).",
+            vertices3D: { A: [0, 0, 0], B: [0, 0, 3], C: [3, 0, 3], D: [3, 0, 0], S: [0, 3, 0] },
+            edgesSolid: [['S','B'], ['S','C'], ['S','D'], ['B','C'], ['C','D']],
+            edgesDashed: [['S','A'], ['A','B'], ['A','D'], ['A','C']],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C'], ['A','C','D']]
+        },
+        chop_ABC: {
+            text: "Cho hình chóp tam giác đều S.ABC có cạnh đáy bằng a, cạnh bên bằng 2a. Gọi O là tâm của đáy ABC. Tính thể tích khối chóp S.ABC.",
+            vertices3D: { A: [0, 0, 0], B: [3, 0, 0], C: [1.5, 0, 2.6], O: [1.5, 0, 0.86], S: [1.5, 3.5, 0.86] },
+            edgesSolid: [['S','A'], ['S','B'], ['S','C'], ['A','C'], ['B','C']],
+            edgesDashed: [['A','B'], ['S','O'], ['A','O']],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','A'], ['A','B','C']]
+        }
+    };
+    let activeModel = samples.chop_ABCD;
+
+    // =========================================================================
+    // THUẬT TOÁN HÌNH HỌC PHỤC VỤ:
+    // 1. TÌM MẶT BAO NGOÀI ĐA DIỆN LỒI
+    // 2. XÉT ẨN/HIỆN CẠNH THEO GÓC NHÌN CAMERA (NÉT LIỀN / NÉT ĐỨT ĐỘNG)
+    // 3. TỰ ĐỘNG TRẢI PHẲNG 2D (NET) CHO MỌI BÀI TẬP AI SINH RA
+    // =========================================================================
+
+    function computeConvexHull2D(points2D) {
+        if (points2D.length <= 2) return points2D.slice();
+        const sorted = points2D.slice().sort((a, b) => Math.abs(a.u - b.u) > 1e-6 ? a.u - b.u : a.v - b.v);
+        const cross = (o, a, b) => (a.u - o.u) * (b.v - o.v) - (a.v - o.v) * (b.u - o.u);
+        const lower = [];
+        for (const p of sorted) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 1e-4) {
+                lower.pop();
+            }
+            lower.push(p);
+        }
+        const upper = [];
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const p = sorted[i];
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 1e-4) {
+                upper.pop();
+            }
+            upper.push(p);
+        }
+        upper.pop();
+        lower.pop();
+        return lower.concat(upper);
+    }
+
+    // HÀM MỚI: Tự động nhận diện Đáy - Đỉnh và chuẩn hóa về hệ trục Y-up của Three.js
+    function normalizeGeometryModel(data) {
+        if (!data || !data.vertices3D) return data;
+        const verts = data.vertices3D;
+        const allKeys = Object.keys(verts);
+        if (allKeys.length < 4) return data;
+
+        // 1. Xác định danh sách đỉnh mặt đáy (baseKeys) và đỉnh chóp (apexKeys)
+        let baseKeys = Array.isArray(data.base) ? data.base.filter(k => verts[k]) : [];
+        if (baseKeys.length < 3) {
+            // Ưu tiên các đỉnh đáy chuẩn trong Toán THPT: A, B, C, D, E, F
+            const standardBase = ['A', 'B', 'C', 'D', 'E', 'F'].filter(k => verts[k]);
+            if (standardBase.length >= 3) {
+                baseKeys = standardBase;
+            }
+        }
+
+        let apexKeys = [];
+        if (data.apex && verts[data.apex]) {
+            apexKeys = [data.apex];
+        } else {
+            apexKeys = allKeys.filter(k => /^S$|^S\d|[A-Z]'|[A-Z]1$/.test(k));
+        }
+
+        // 2. Kiểm tra xem mặt đáy đang nằm trên mặt phẳng y = const hay z = const (do AI dùng Oxyz Toán học)
+        if (baseKeys.length >= 3) {
+            const ys = baseKeys.map(k => verts[k][1]);
+            const zs = baseKeys.map(k => verts[k][2]);
+            const spreadY = Math.max(...ys) - Math.min(...ys);
+            const spreadZ = Math.max(...zs) - Math.min(...zs);
+
+            // Nếu các đỉnh đáy có z gần như bằng nhau (spreadZ nhỏ) nhưng y lại trải rộng (spreadY lớn)
+            // -> AI đã đặt đáy trên mặt phẳng Oxy (z=0) và chiều cao là trục Oz. Cần đổi trục Y và Z!
+            if (spreadZ < 0.15 && spreadY > 0.4) {
+                allKeys.forEach(k => {
+                    const [x, y, z] = verts[k];
+                    verts[k] = [x, z, y];
+                });
+            }
+        }
+
+        // 3. Đưa mặt đáy về đúng mặt phẳng y = 0 và đảm bảo đỉnh S luôn hướng lên trên (y > 0)
+        if (baseKeys.length >= 3) {
+            const baseY = baseKeys.reduce((sum, k) => sum + verts[k][1], 0) / baseKeys.length;
+            allKeys.forEach(k => {
+                verts[k][1] = Number((verts[k][1] - baseY).toFixed(4));
+            });
+
+            // Kiểm tra chiều cao của đỉnh chóp S (hoặc đỉnh có |y| lớn nhất)
+            let refApexY = 0;
+            if (apexKeys.length > 0) {
+                refApexY = apexKeys.reduce((sum, k) => sum + verts[k][1], 0) / apexKeys.length;
+            } else {
+                const nonBase = allKeys.filter(k => !baseKeys.includes(k));
+                if (nonBase.length > 0) {
+                    refApexY = nonBase.reduce((maxY, k) => Math.abs(verts[k][1]) > Math.abs(maxY) ? verts[k][1] : maxY, 0);
+                }
+            }
+
+            // Nếu đỉnh bị lộn xuống dưới mặt đáy (y < 0) thì lật ngược trục Oy lên trên
+            if (refApexY < -0.05) {
+                allKeys.forEach(k => {
+                    verts[k][1] = -verts[k][1];
+                });
+            }
+        }
+
+        return data;
+    }
+
+    function extractOuterBoundaryFaces(vertsMap, mainHullKeys = null) {
+        // Chỉ lấy các đỉnh chính (S, A, B, C, D, A', B'...) để dựng vỏ bao lồi, tránh bị nhiễu bởi điểm phụ H, K, I, M
+        let hullKeys = Array.isArray(mainHullKeys) && mainHullKeys.length >= 4
+            ? mainHullKeys.filter(k => vertsMap[k])
+            : Object.keys(vertsMap).filter(k => /^(S|A|B|C|D|E|F|A'|B'|C'|D'|A1|B1|C1|D1)$/.test(k));
+
+        if (hullKeys.length < 4) {
+            hullKeys = Object.keys(vertsMap);
+        }
+        const allKeys = Object.keys(vertsMap);
+        const pts = {};
+        allKeys.forEach(k => { pts[k] = new THREE.Vector3(...vertsMap[k]); });
+        if (hullKeys.length < 4) return [];
+
+        const centroid3D = new THREE.Vector3();
+        hullKeys.forEach(k => centroid3D.add(pts[k]));
+        centroid3D.divideScalar(hullKeys.length);
+
+        const planes = [];
+        const EPS = 0.08; // Tăng nhẹ dung sai để chịu được sai số làm tròn của AI
+
+        for (let i = 0; i < hullKeys.length; i++) {
+            for (let j = i + 1; j < hullKeys.length; j++) {
+                for (let k = j + 1; k < hullKeys.length; k++) {
+                    const pA = pts[hullKeys[i]], pB = pts[hullKeys[j]], pC = pts[hullKeys[k]];
+                    const v1 = new THREE.Vector3().subVectors(pB, pA);
+                    const v2 = new THREE.Vector3().subVectors(pC, pA);
+                    const normal = new THREE.Vector3().crossVectors(v1, v2);
+                    if (normal.lengthSq() < 1e-5) continue;
+                    normal.normalize();
+
+                    if (normal.dot(new THREE.Vector3().subVectors(pA, centroid3D)) < 0) {
+                        normal.negate();
+                    }
+                    const d = normal.dot(pA);
+
+                    let isBoundary = true;
+                    for (let m = 0; m < hullKeys.length; m++) {
+                        if (normal.dot(pts[hullKeys[m]]) - d > EPS) {
+                            isBoundary = false;
+                            break;
+                        }
+                    }
+                    if (!isBoundary) continue;
+
+                    const exists = planes.some(pl => pl.normal.dot(normal) > 0.99 && Math.abs(pl.d - d) < EPS);
+                    if (!exists) {
+                        planes.push({ normal, d });
+                    }
+                }
+            }
+        }
+
+        const resultFaces = [];
+        planes.forEach(pl => {
+            const coplanarAllKeys = allKeys.filter(k => Math.abs(pl.normal.dot(pts[k]) - pl.d) <= EPS);
+            const coplanarHullKeys = hullKeys.filter(k => Math.abs(pl.normal.dot(pts[k]) - pl.d) <= EPS);
+            if (coplanarHullKeys.length < 3) return;
+
+            const faceCenter = new THREE.Vector3();
+            coplanarHullKeys.forEach(k => faceCenter.add(pts[k]));
+            faceCenter.divideScalar(coplanarHullKeys.length);
+
+            let ref = Math.abs(pl.normal.x) < 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+            const axisU = new THREE.Vector3().crossVectors(ref, pl.normal).normalize();
+            const axisV = new THREE.Vector3().crossVectors(pl.normal, axisU).normalize();
+
+            const proj2D = coplanarHullKeys.map(k => {
+                const rel = new THREE.Vector3().subVectors(pts[k], faceCenter);
+                return { key: k, u: rel.dot(axisU), v: rel.dot(axisV) };
+            });
+
+            const hull = computeConvexHull2D(proj2D);
+            const corners = hull.map(h => h.key);
+            if (corners.length >= 3) {
+                resultFaces.push({
+                    corners,
+                    coplanarKeys: coplanarAllKeys,
+                    normal: pl.normal,
+                    d: pl.d,
+                    center: faceCenter
+                });
+            }
+        });
+
+        return resultFaces;
+    }
+
+    function segmentIntersectsTriangle(orig, dest, tA, tB, tC) {
+        const dir = new THREE.Vector3().subVectors(dest, orig);
+        const edge1 = new THREE.Vector3().subVectors(tB, tA);
+        const edge2 = new THREE.Vector3().subVectors(tC, tA);
+        const h = new THREE.Vector3().crossVectors(dir, edge2);
+        const a = edge1.dot(h);
+        if (Math.abs(a) < 1e-6) return false;
+        const f = 1.0 / a;
+        const s = new THREE.Vector3().subVectors(orig, tA);
+        const u = f * s.dot(h);
+        if (u < -1e-3 || u > 1.0 + 1e-3) return false;
+        const q = new THREE.Vector3().crossVectors(s, edge1);
+        const v = f * dir.dot(q);
+        if (v < -1e-3 || u + v > 1.0 + 1e-3) return false;
+        const t = f * edge2.dot(q);
+        return (t > 0.02 && t < 0.97);
+    }
+
+    function updateDynamicEdgesVisibility() {
+        if (isUnfolded || dynamicEdges.length === 0) return;
+        const camPos = camera.position;
+
+        dynamicEdges.forEach(edge => {
+            let visible = false;
+
+            if (edge.ownerFaces.length > 0) {
+                visible = edge.ownerFaces.some(f => {
+                    const toCam = new THREE.Vector3().subVectors(camPos, edge.midpoint);
+                    return f.normal.dot(toCam) > 1e-3;
+                });
+            } else {
+                visible = true;
+                for (const samplePt of edge.samplePoints) {
+                    let pointBlocked = false;
+                    for (const tri of outerTriangles) {
+                        if (segmentIntersectsTriangle(camPos, samplePt, tri[0], tri[1], tri[2])) {
+                            pointBlocked = true;
+                            break;
+                        }
+                    }
+                    if (pointBlocked) {
+                        visible = false;
+                        break;
+                    }
+                }
+            }
+
+            const targetMat = visible ? solidMat : dashedMat;
+            if (edge.line.material !== targetMat) {
+                edge.line.material = targetMat;
+            }
+        });
+    }
+
+    function buildUnfoldedNet(data) {
+        const verts = data.vertices3D || {};
+        const bFaces = extractOuterBoundaryFaces(verts);
+        if (bFaces.length === 0) return null;
+
+        const pts3D = {};
+        Object.keys(verts).forEach(k => { pts3D[k] = new THREE.Vector3(...verts[k]); });
+
+        let baseIdx = 0;
+        let minNy = Infinity;
+        bFaces.forEach((f, idx) => {
+            if (f.normal.y < minNy) {
+                minNy = f.normal.y;
+                baseIdx = idx;
+            }
+        });
+
+        const unfoldedVerts = {};
+        const netPolygons = [];
+        const netAuxDashed = [];
+        const face2DMap = {};
+        const visited = new Set();
+
+        function registerUnfoldedVertex(baseKey, pos2D) {
+            for (const existingKey of Object.keys(unfoldedVerts)) {
+                const baseExisting = existingKey.replace(/_.*$/, '');
+                if (baseExisting === baseKey) {
+                    const p = unfoldedVerts[existingKey];
+                    const dist = Math.hypot(p[0] - pos2D.x, p[2] - pos2D.z);
+                    if (dist < 0.08) return existingKey;
+                }
+            }
+            if (!unfoldedVerts[baseKey]) {
+                unfoldedVerts[baseKey] = [pos2D.x, 0, pos2D.z];
+                return baseKey;
+            }
+            let suffix = 1;
+            while (unfoldedVerts[`${baseKey}_${suffix}`]) suffix++;
+            const newKey = `${baseKey}_${suffix}`;
+            unfoldedVerts[newKey] = [pos2D.x, 0, pos2D.z];
+            return newKey;
+        }
+
+        const baseFace = bFaces[baseIdx];
+        face2DMap[baseIdx] = {};
+        let bRef = Math.abs(baseFace.normal.x) < 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+        const isHorizontalBase = Math.abs(baseFace.normal.y) > 0.98;
+        const bAxisU = new THREE.Vector3().crossVectors(bRef, baseFace.normal).normalize();
+        const bAxisV = new THREE.Vector3().crossVectors(baseFace.normal, bAxisU).normalize();
+
+        baseFace.coplanarKeys.forEach(k => {
+            let pos2D;
+            if (isHorizontalBase) {
+                pos2D = new THREE.Vector3(pts3D[k].x, 0, pts3D[k].z);
+            } else {
+                const rel = new THREE.Vector3().subVectors(pts3D[k], baseFace.center);
+                pos2D = new THREE.Vector3(rel.dot(bAxisU), 0, rel.dot(bAxisV));
+            }
+            const mappedKey = registerUnfoldedVertex(k, pos2D);
+            face2DMap[baseIdx][k] = { key: mappedKey, pos: pos2D };
+        });
+        netPolygons.push(baseFace.corners.map(k => face2DMap[baseIdx][k].key));
+        visited.add(baseIdx);
+
+        let progress = true;
+        while (visited.size < bFaces.length && progress) {
+            progress = false;
+            for (let cIdx = 0; cIdx < bFaces.length; cIdx++) {
+                if (visited.has(cIdx)) continue;
+                const childFace = bFaces[cIdx];
+
+                let foundHinge = null;
+                for (const pIdx of visited) {
+                    const parentFace = bFaces[pIdx];
+                    for (let i = 0; i < childFace.corners.length; i++) {
+                        const uKey = childFace.corners[i];
+                        const vKey = childFace.corners[(i + 1) % childFace.corners.length];
+                        if (parentFace.corners.includes(uKey) && parentFace.corners.includes(vKey)) {
+                            foundHinge = { pIdx, uKey, vKey };
+                            break;
+                        }
+                    }
+                    if (foundHinge) break;
+                }
+
+                if (!foundHinge) continue;
+                const { pIdx, uKey, vKey } = foundHinge;
+                const parentMap = face2DMap[pIdx];
+                const U2D = parentMap[uKey].pos;
+                const V2D = parentMap[vKey].pos;
+
+                const parentCorners2D = bFaces[pIdx].corners.map(k => parentMap[k].pos);
+                const parentCentroid2D = new THREE.Vector3();
+                parentCorners2D.forEach(p => parentCentroid2D.add(p));
+                parentCentroid2D.divideScalar(parentCorners2D.length);
+
+                const hingeMid2D = new THREE.Vector3().addVectors(U2D, V2D).multiplyScalar(0.5);
+                const edge2D = new THREE.Vector3().subVectors(V2D, U2D);
+                const edgeLen = edge2D.length();
+                if (edgeLen < 1e-5) continue;
+
+                const unitEdge2D = edge2D.clone().divideScalar(edgeLen);
+                let outNormal2D = new THREE.Vector3(-unitEdge2D.z, 0, unitEdge2D.x);
+                const toParent = new THREE.Vector3().subVectors(parentCentroid2D, hingeMid2D);
+                if (outNormal2D.dot(toParent) > 0) {
+                    outNormal2D.negate();
+                }
+
+                const U3D = pts3D[uKey];
+                const V3D = pts3D[vKey];
+                const unitEdge3D = new THREE.Vector3().subVectors(V3D, U3D).normalize();
+                const toChildCenter3D = new THREE.Vector3().subVectors(childFace.center, U3D);
+                const projAlong = unitEdge3D.clone().multiplyScalar(toChildCenter3D.dot(unitEdge3D));
+                const unitPerp3D = new THREE.Vector3().subVectors(toChildCenter3D, projAlong).normalize();
+
+                face2DMap[cIdx] = {};
+                childFace.coplanarKeys.forEach(wKey => {
+                    if (wKey === uKey) {
+                        face2DMap[cIdx][wKey] = parentMap[uKey];
+                        return;
+                    }
+                    if (wKey === vKey) {
+                        face2DMap[cIdx][wKey] = parentMap[vKey];
+                        return;
+                    }
+                    const rel3D = new THREE.Vector3().subVectors(pts3D[wKey], U3D);
+                    const s = rel3D.dot(unitEdge3D);
+                    const h = rel3D.dot(unitPerp3D);
+                    const pos2D = U2D.clone()
+                        .add(unitEdge2D.clone().multiplyScalar(s))
+                        .add(outNormal2D.clone().multiplyScalar(h));
+
+                    const mappedKey = registerUnfoldedVertex(wKey, pos2D);
+                    face2DMap[cIdx][wKey] = { key: mappedKey, pos: pos2D };
+                });
+
+                netPolygons.push(childFace.corners.map(k => face2DMap[cIdx][k].key));
+                visited.add(cIdx);
+                progress = true;
+            }
+        }
+
+        const allOriginalEdges = [...(data.edgesSolid || []), ...(data.edgesDashed || [])];
+        allOriginalEdges.forEach(([v1, v2]) => {
+            bFaces.forEach((f, fIdx) => {
+                if (!face2DMap[fIdx]) return;
+                if (f.coplanarKeys.includes(v1) && f.coplanarKeys.includes(v2)) {
+                    let isBorder = false;
+                    for (let i = 0; i < f.corners.length; i++) {
+                        const c1 = f.corners[i];
+                        const c2 = f.corners[(i + 1) % f.corners.length];
+                        if ((c1 === v1 && c2 === v2) || (c1 === v2 && c2 === v1)) {
+                            isBorder = true;
+                            break;
+                        }
+                    }
+                    if (!isBorder) {
+                        const k1 = face2DMap[fIdx][v1].key;
+                        const k2 = face2DMap[fIdx][v2].key;
+                        netAuxDashed.push([k1, k2]);
+                    }
+                }
+            });
+        });
+
+        return {
+            verticesUnfolded: unfoldedVerts,
+            netPolygons,
+            netAuxDashed
+        };
+    }
+
+    function loadSample() {
+        const key = document.getElementById('sampleSelect').value;
+        activeModel = samples[key];
+        document.getElementById('problemInput').value = activeModel.text;
+        isUnfolded = false;
+        document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
+        drawGeometry(activeModel, false);
+        resetCamera();
+    }
+
+   function drawGeometry(data, unfolded = false) {
+        normalizeGeometryModel(data);
+
+        while (shapeGroup.children.length > 0) shapeGroup.remove(shapeGroup.children[0]);
+        labelsContainer.innerHTML = '';
+        labelElements = {};
+        dynamicEdges = [];
+        outerTriangles = [];
+
+        const netData = buildUnfoldedNet(data);
+        const verts = (unfolded && netData) ? netData.verticesUnfolded : data.vertices3D;
+        currentVertices = verts;
+
+        if (!unfolded) {
+            const mainHullKeys = [
+                ...(data.base || []),
+                ...(data.apex ? [data.apex] : [])
+            ];
+            outerBoundaryFaces = extractOuterBoundaryFaces(data.vertices3D, mainHullKeys);
+
+            if (outerBoundaryFaces.length > 0) {
+                outerBoundaryFaces.forEach(f => {
+                    const c = f.corners;
+                    for (let i = 1; i < c.length - 1; i++) {
+                        const p0 = new THREE.Vector3(...verts[c[0]]);
+                        const p1 = new THREE.Vector3(...verts[c[i]]);
+                        const p2 = new THREE.Vector3(...verts[c[i + 1]]);
+                        outerTriangles.push([p0, p1, p2]);
+                        const geo = new THREE.BufferGeometry().setFromPoints([p0, p1, p2]);
+                        shapeGroup.add(new THREE.Mesh(geo, faceMat));
+                    }
+                });
+            } else {
+                (data.faces || []).forEach(f => {
+                    for (let i = 1; i < f.length - 1; i++) {
+                        if (verts[f[0]] && verts[f[i]] && verts[f[i + 1]]) {
+                            const p0 = new THREE.Vector3(...verts[f[0]]);
+                            const p1 = new THREE.Vector3(...verts[f[i]]);
+                            const p2 = new THREE.Vector3(...verts[f[i + 1]]);
+                            outerTriangles.push([p0, p1, p2]);
+                            const geo = new THREE.BufferGeometry().setFromPoints([p0, p1, p2]);
+                            shapeGroup.add(new THREE.Mesh(geo, faceMat));
+                        }
+                    }
+                });
+            }
+
+            const rawEdges = [...(data.edgesSolid || []), ...(data.edgesDashed || [])];
+            const seenEdgeKeys = new Set();
+
+            rawEdges.forEach(([v1, v2]) => {
+                if (!verts[v1] || !verts[v2]) return;
+                const edgeKey = [v1, v2].sort().join('--');
+                if (seenEdgeKeys.has(edgeKey)) return;
+                seenEdgeKeys.add(edgeKey);
+
+                const p1 = new THREE.Vector3(...verts[v1]);
+                const p2 = new THREE.Vector3(...verts[v2]);
+                const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+                const line = new THREE.Line(geo, solidMat);
+                line.computeLineDistances();
+                shapeGroup.add(line);
+
+                const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                const samplePoints = [
+                    new THREE.Vector3().lerpVectors(p1, p2, 0.25),
+                    midpoint,
+                    new THREE.Vector3().lerpVectors(p1, p2, 0.75)
+                ];
+
+                const ownerFaces = outerBoundaryFaces.filter(
+                    f => f.coplanarKeys.includes(v1) && f.coplanarKeys.includes(v2)
+                );
+
+                dynamicEdges.push({ v1, v2, line, midpoint, samplePoints, ownerFaces });
+            });
+
+            updateDynamicEdgesVisibility();
+        } else if (netData) {
+            netData.netPolygons.forEach(poly => {
+                const pts = poly.map(k => new THREE.Vector3(...verts[k]));
+                for (let i = 1; i < pts.length - 1; i++) {
+                    const triGeo = new THREE.BufferGeometry().setFromPoints([pts[0], pts[i], pts[i + 1]]);
+                    shapeGroup.add(new THREE.Mesh(triGeo, faceMat));
+                }
+                const borderGeo = new THREE.BufferGeometry().setFromPoints(pts);
+                shapeGroup.add(new THREE.LineLoop(borderGeo, solidMat));
+            });
+
+            (netData.netAuxDashed || []).forEach(([k1, k2]) => {
+                if (!verts[k1] || !verts[k2]) return;
+                const geo = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(...verts[k1]),
+                    new THREE.Vector3(...verts[k2])
+                ]);
+                const line = new THREE.Line(geo, dashedMat);
+                line.computeLineDistances();
+                shapeGroup.add(line);
+            });
+        }
+
+        Object.keys(verts).forEach(k => {
+            const div = document.createElement('div');
+            div.className = 'label-3d';
+            div.textContent = k.replace(/_.*$/, '');
+            labelsContainer.appendChild(div);
+            labelElements[k] = div;
+        });
+    }
+
+    function resetCamera() {
+        camera.position.set(6, 4.5, 7.5);
+        controls.target.set(1.5, 1, 1.2);
+        controls.update();
+    }
+
+    function toggleUnfold() {
+        isUnfolded = !isUnfolded;
+        document.getElementById('unfoldBtn').innerText = isUnfolded ? "🧊 Dựng lại khối 3D" : "📐 Trải phẳng 2D (Net)";
+        drawGeometry(activeModel, isUnfolded);
+
+        if (isUnfolded) {
+            const keys = Object.keys(currentVertices);
+            let cx = 0, cz = 0;
+            keys.forEach(k => {
+                cx += currentVertices[k][0];
+                cz += currentVertices[k][2];
+            });
+            if (keys.length > 0) {
+                cx /= keys.length;
+                cz /= keys.length;
+            }
+            camera.position.set(cx, 13, cz + 0.01);
+            controls.target.set(cx, 0, cz);
+            controls.update();
+        } else {
+            resetCamera();
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        if (!isUnfolded) {
+            updateDynamicEdgesVisibility();
+        }
+        renderer.render(scene, camera);
+
+        if (!container.clientWidth || !container.clientHeight) return;
+        Object.keys(currentVertices).forEach(k => {
+            const pos = new THREE.Vector3(...currentVertices[k]);
+            pos.project(camera);
+            const x = (pos.x * .5 + .5) * container.clientWidth;
+            const y = (-(pos.y * .5) + .5) * container.clientHeight;
+            if (labelElements[k]) {
+                labelElements[k].style.transform = `translate(-50%, -50%) translate(${x}px,${y - 12}px)`;
+            }
+        });
+    }
+
+    // --- KẾT NỐI GEMINI AI SIÊU TỐC ---
+    async function callGeminiWithRetry(apiKey, parts, btn) {
+        const preferred = document.getElementById('modelSelect').value;
+        const modelsToTry = [preferred, "gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.5-pro"];
+        let lastError = "";
+        for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
+            const model = modelsToTry[attempt];
+            if (btn && btn.id === 'solveBtn') {
+                btn.innerText = `⚡ Đang giải siêu tốc (${model})...`;
+            }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        contents: [{ parts: parts }],
+                        generationConfig: {
+                            temperature: 0.2
+                        }
+                    })
+                });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                if (res.ok && data.candidates) {
+                    return data;
+                }
+                lastError = data.error ? data.error.message : "Lỗi kết nối";
+            } catch (e) {
+                clearTimeout(timeoutId);
+                lastError = "Máy chủ phản hồi chậm, đang tự động đổi luồng...";
+            }
+        }
+        throw new Error(lastError);
+    }
+
+    async function solveAndDraw() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const problem = document.getElementById('problemInput').value.trim();
+        const btn = document.getElementById('solveBtn');
+        const output = document.getElementById('solutionOutput');
+        if (!apiKey) {
+            showToast("Bạn hãy dán Gemini API Key vào ô ở góc trên bên phải trước nhé!", "error");
+            document.getElementById('apiKeyInput').focus();
+            return;
+        }
+        btn.disabled = true;
+        try {
+            const taskDescription = uploadedImageBase64
+                ? "Hãy đọc kỹ đề bài toán hình học trong bức ảnh đính kèm (bỏ qua văn bản mẫu nếu không khớp ảnh) và giải bài toán đó."
+                : ("Hãy giải bài toán sau: " + problem);
+            const prompt = `Bạn là chuyên gia giải toán Hình học không gian THPT và dựng hình 3D trên Three.js.
+${taskDescription}
+Hãy trình bày kết quả theo đúng 2 phần sau:
+PHẦN 1: LỜI GIẢI CHI TIẾT
+Trình bày lời giải từng bước dễ hiểu bằng tiếng Việt, chọn đáp án trắc nghiệm (nếu có). Sử dụng thẻ HTML (<p>, <strong>, <br>) để xuống dòng đẹp mắt và kẹp mọi công thức toán vào giữa dấu $...$ (ví dụ: $SA \\perp (ABCD)$).
+PHẦN 2: DỮ LIỆU HÌNH 3D (HỆ TRỤC THREE.JS Y-UP)
+Ở cuối câu trả lời, hãy đặt khối dữ liệu tọa độ 3D nằm giữa 2 thẻ <GEOMETRY_JSON> và </GEOMETRY_JSON>.
+QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
+1. Mỗi điểm có tọa độ dạng [x, y, z], trong đó y (phần tử ở giữa) LÀ CHIỀU CAO HƯỚNG LÊN TRÊN, còn mặt phẳng ngang chứa đáy là mặt phẳng (x, z) ứng với y = 0.
+2. TẤT CẢ các đỉnh thuộc mặt đáy (ví dụ A, B, C, D và trung điểm H, M, tâm O thuộc đáy) PHẢI có tung độ y = 0 (ví dụ: A=[0, 0, 0], B=[3, 0, 0], C=[3, 0, 3], D=[0, 0, 3]). Tuyệt đối KHÔNG đặt đáy trên mặt phẳng z = 0!
+3. Đỉnh chóp S (hoặc đáy trên A', B', C', D') PHẢI có y > 0 (ví dụ nếu H(1.5, 0, 0) là chân đường cao và SH = 2.6 thì S = [1.5, 2.6, 0]).
+4. Khai báo rõ mảng "base" (các đỉnh tạo thành đa giác đáy theo thứ tự vòng quanh) và "apex" (đỉnh chóp).
+
+<GEOMETRY_JSON>
+{
+  "base": ["A", "B", "C", "D"],
+  "apex": "S",
+  "vertices3D": {"A": [0,0,0], "B": [3,0,0], "C": [3,0,3], "D": [0,0,3], "H": [1.5,0,0], "S": [1.5,2.6,0]},
+  "edgesSolid": [["S","A"], ["S","B"], ["S","C"], ["S","D"], ["A","B"], ["B","C"], ["C","D"], ["D","A"]],
+  "edgesDashed": [["S","H"], ["A","C"], ["B","D"]],
+  "faces": [["A","B","C","D"], ["S","A","B"], ["S","B","C"], ["S","C","D"], ["S","D","A"]]
+}
+</GEOMETRY_JSON>`;
+            const parts = [{ text: prompt }];
+            if (uploadedImageBase64) {
+                parts.push({ inline_data: { mime_type: uploadedImageMime, data: uploadedImageBase64 } });
+            }
+            const data = await callGeminiWithRetry(apiKey, parts, btn);
+            const rawText = data.candidates[0].content.parts[0].text;
+            const geoMatch = rawText.match(/<GEOMETRY_JSON>([\s\S]*?)<\/GEOMETRY_JSON>/);
+            let solutionHtml = rawText.replace(/<GEOMETRY_JSON>[\s\S]*?<\/GEOMETRY_JSON>/, '').replace(/PHẦN 1:.*|PHẦN 2:.*/gi, '').trim();
+            solutionHtml = solutionHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            output.innerHTML = solutionHtml;
+            renderMathInElement(output, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+            if (geoMatch && geoMatch[1]) {
+                try {
+                    const cleanJson = geoMatch[1].replace(/```json|```/g, '').trim();
+                    const geoData = JSON.parse(cleanJson);
+                    if (geoData && geoData.vertices3D) {
+                        activeModel = geoData;
+                        isUnfolded = false;
+                        document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
+                        drawGeometry(activeModel, false);
+                        resetCamera();
+                    }
+                } catch (jsonErr) {
+                    console.warn("Không thể dựng hình mới, giữ hình hiện tại:", jsonErr);
+                }
+            }
+            showToast("Đã phân tích lời giải và dựng mô hình 3D thành công!", "success");
+        } catch (err) {
+            console.error(err);
+            showToast("Máy chủ Google hiện đang bận, bạn hãy đợi 5 giây rồi bấm lại nhé! (" + err.message + ")", "error");
+        }
+        btn.innerText = "✨ Phân Tích AI & Dựng Hình 3D";
+        btn.disabled = false;
+    }
+
+    resetCamera();
+    drawGeometry(activeModel, false);
+    animate();
+
+    window.addEventListener('resize', () => {
+        if (container.clientWidth && container.clientHeight) {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+        resizeGeoGebraApplet();
+    });
+    document.addEventListener("DOMContentLoaded", () => {
+        renderMathInElement(document.body, { delimiters: [{left: "$", right: "$", display: false}] });
+    });
+    // =========================================================================
+        // =========================================================================
+    // TÍNH NĂNG XUẤT FILE WORD (.DOCX) VÀ PDF (.PDF) CHO MỤC GIẢI TOÁN 3D (BẢN NÂNG CẤP OMML)
+    // =========================================================================
+
+    // 1. Chụp snapshot trực tiếp từ khung Canvas Three.js 3D kèm nhãn đỉnh (A, B, C, S...)
+    async function capture3DSnapshot() {
+        if (!isUnfolded) {
+            updateDynamicEdgesVisibility();
+        }
+        renderer.render(scene, camera);
+        const webglDataUrl = renderer.domElement.toDataURL('image/png');
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const w = renderer.domElement.width || 800;
+                const h = renderer.domElement.height || 450;
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = w;
+                exportCanvas.height = h;
+                const ctx = exportCanvas.getContext('2d');
+
+                ctx.fillStyle = '#070a12';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+
+                const pixelRatio = w / (container.clientWidth || w);
+                ctx.font = `bold ${Math.round(15 * pixelRatio)}px "Segoe UI", Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                Object.keys(currentVertices).forEach(k => {
+                    const pos = new THREE.Vector3(...currentVertices[k]);
+                    pos.project(camera);
+                    const x = (pos.x * 0.5 + 0.5) * w;
+                    const y = (-(pos.y * 0.5) + 0.5) * h - (12 * pixelRatio);
+                    const labelText = k.replace(/_.*$/, '');
+
+                    ctx.lineWidth = 4 * pixelRatio;
+                    ctx.strokeStyle = '#000000';
+                    ctx.strokeText(labelText, x, y);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillText(labelText, x, y);
+                });
+
+                resolve({
+                    dataUrl: exportCanvas.toDataURL('image/png'),
+                    width: w,
+                    height: h
+                });
+            };
+            img.onerror = () => resolve({ dataUrl: webglDataUrl, width: 800, height: 450 });
+            img.src = webglDataUrl;
+        });
+    }
+
+    // 2. BỘ PHÂN TÍCH CÚ PHÁP LATEX SANG KHUNG CÔNG THỨC TOÁN 2 TẦNG CỦA WORD (OMML)
+    const LATEX_SYMBOL_MAP = {
+        '\\perp': ' ⊥ ', '\\parallel': ' ∥ ', '\\triangle': 'Δ', '\\Delta': 'Δ',
+        '\\angle': '∠', '\\measuredangle': '∠', '\\Leftrightarrow': ' ⇔ ', '\\iff': ' ⇔ ',
+        '\\Rightarrow': ' ⇒ ', '\\implies': ' ⇒ ', '\\rightarrow': ' → ', '\\to': ' → ',
+        '\\approx': ' ≈ ', '\\equiv': ' ≡ ', '\\neq': ' ≠ ', '\\ne': ' ≠ ',
+        '\\leq': ' ≤ ', '\\le': ' ≤ ', '\\geq': ' ≥ ', '\\ge': ' ≥ ',
+        '\\pm': ' ± ', '\\mp': ' ∓ ', '\\cdot': '·', '\\times': ' × ', '\\div': ' ÷ ',
+        '\\in': ' ∈ ', '\\notin': ' ∉ ', '\\subset': ' ⊂ ', '\\subseteq': ' ⊆ ',
+        '\\supset': ' ⊃ ', '\\supseteq': ' ⊇ ', '\\cap': ' ∩ ', '\\cup': ' ∪ ',
+        '\\emptyset': '∅', '\\infty': '∞', '\\forall': '∀', '\\exists': '∃',
+        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ',
+        '\\epsilon': 'ε', '\\varepsilon': 'ε', '\\zeta': 'ζ', '\\eta': 'η',
+        '\\theta': 'θ', '\\vartheta': 'θ', '\\iota': 'ι', '\\kappa': 'κ',
+        '\\lambda': 'λ', '\\mu': 'μ', '\\nu': 'ν', '\\xi': 'ξ',
+        '\\pi': 'π', '\\rho': 'ρ', '\\sigma': 'σ', '\\tau': 'τ',
+        '\\upsilon': 'υ', '\\phi': 'φ', '\\varphi': 'φ', '\\chi': 'χ',
+        '\\psi': 'ψ', '\\omega': 'ω', '\\Gamma': 'Γ', '\\Lambda': 'Λ',
+        '\\Sigma': 'Σ', '\\Omega': 'Ω', '\\Phi': 'Φ', '\\Psi': 'Ψ',
+        '\\sin': 'sin', '\\cos': 'cos', '\\tan': 'tan', '\\cot': 'cot',
+        '\\arcsin': 'arcsin', '\\arccos': 'arccos', '\\arctan': 'arctan',
+        '\\ln': 'ln', '\\log': 'log', '\\lim': 'lim', '\\max': 'max', '\\min': 'min',
+        '\\circ': '°', '\\quad': ' ', '\\qquad': ' ', '\\,': ' ', '\\;': ' ', '\\:': ' ', '\\!': ''
+    };
+
+    // Hàm đọc nội dung trong cặp ngoặc nhọn { ... } có hỗ trợ ngoặc lồng nhau
+    function readBracedGroup(str, pos) {
+        while (pos < str.length && /\s/.test(str[pos])) pos++;
+        if (pos >= str.length) return { content: '', nextPos: pos };
+
+        if (str[pos] !== '{') {
+            if (str[pos] === '\\') {
+                let end = pos + 1;
+                while (end < str.length && /[a-zA-Z]/.test(str[end])) end++;
+                if (end === pos + 1 && end < str.length) end++;
+                return { content: str.slice(pos, end), nextPos: end };
+            }
+            return { content: str[pos], nextPos: pos + 1 };
+        }
+
+        let depth = 0;
+        const start = pos + 1;
+        for (let i = pos; i < str.length; i++) {
+            if (str[i] === '{' && str[i - 1] !== '\\') depth++;
+            else if (str[i] === '}' && str[i - 1] !== '\\') {
+                depth--;
+                if (depth === 0) {
+                    return { content: str.slice(start, i), nextPos: i + 1 };
+                }
+            }
+        }
+        return { content: str.slice(start), nextPos: str.length };
+    }
+
+    // Chuyển biểu thức LaTeX đơn giản sang chuỗi ký tự sạch (dùng cho bên trong \widehat, \vec...)
+    function latexToFlatString(tex) {
+        if (!tex) return '';
+        let s = tex;
+        Object.keys(LATEX_SYMBOL_MAP).forEach(cmd => {
+            s = s.split(cmd).join(LATEX_SYMBOL_MAP[cmd]);
+        });
+        return s.replace(/[{}]/g, '').trim();
+    }
+
+    // Chuyển chuỗi LaTeX sang mảng đối tượng Toán học OMML của thư viện docx
+    function parseLatexToDocxMathNodes(tex) {
+        const { MathRun, MathFraction, MathRadical, MathSuperScript, MathSubScript } = window.docx;
+        if (!tex) return [new MathRun('')];
+
+        // Làm sạch các từ khóa căn chỉnh và khoảng trắng thừa
+        let s = tex
+            .replace(/\\(?:left|right|big|Big|bigg|Bigg)\b/g, '')
+            .replace(/\\begin\{[^}]+\}|\\end\{[^}]+\}/g, '')
+            .replace(/\^\s*\{\\circ\}|\^\\circ/g, '°')
+            .trim();
+
+        const nodes = [];
+        let textBuf = '';
+        let pos = 0;
+
+        function flushText() {
+            if (textBuf.length > 0) {
+                nodes.push(new MathRun(textBuf));
+                textBuf = '';
+            }
+        }
+
+        while (pos < s.length) {
+            // 1. Xử lý phân số 2 tầng \frac{tử}{mẫu}, \dfrac, \tfrac
+            const fracMatch = s.slice(pos).match(/^\\(?:d|t)?frac\b/);
+            if (fracMatch) {
+                flushText();
+                pos += fracMatch[0].length;
+                const num = readBracedGroup(s, pos);
+                const den = readBracedGroup(s, num.nextPos);
+                pos = den.nextPos;
+                nodes.push(new MathFraction({
+                    numerator: parseLatexToDocxMathNodes(num.content),
+                    denominator: parseLatexToDocxMathNodes(den.content)
+                }));
+                continue;
+            }
+
+            // 2. Xử lý căn thức \sqrt{...} hoặc \sqrt[n]{...}
+            if (s.startsWith('\\sqrt', pos)) {
+                flushText();
+                pos += 5;
+                while (pos < s.length && /\s/.test(s[pos])) pos++;
+                let degContent = null;
+                if (s[pos] === '[') {
+                    const closeBracket = s.indexOf(']', pos);
+                    if (closeBracket !== -1) {
+                        degContent = s.slice(pos + 1, closeBracket);
+                        pos = closeBracket + 1;
+                    }
+                }
+                const rad = readBracedGroup(s, pos);
+                pos = rad.nextPos;
+                const radicalOpts = {
+                    children: parseLatexToDocxMathNodes(rad.content)
+                };
+                if (degContent) {
+                    radicalOpts.degree = parseLatexToDocxMathNodes(degContent);
+                }
+                nodes.push(new MathRadical(radicalOpts));
+                continue;
+            }
+
+            // 3. Xử lý ký hiệu góc \widehat{SCA}, \hat{A}
+            const hatMatch = s.slice(pos).match(/^\\(?:widehat|hat)\b/);
+            if (hatMatch) {
+                flushText();
+                pos += hatMatch[0].length;
+                const grp = readBracedGroup(s, pos);
+                pos = grp.nextPos;
+                nodes.push(new MathRun('∠' + latexToFlatString(grp.content)));
+                continue;
+            }
+
+            // 4. Xử lý ký hiệu vectơ \overrightarrow{AB}, \vec{u}
+            const vecMatch = s.slice(pos).match(/^\\(?:overrightarrow|vec)\b/);
+            if (vecMatch) {
+                flushText();
+                pos += vecMatch[0].length;
+                const grp = readBracedGroup(s, pos);
+                pos = grp.nextPos;
+                nodes.push(new MathRun(latexToFlatString(grp.content) + '\u20D7'));
+                continue;
+            }
+
+            // 5. Xử lý văn bản trong công thức \text{...}, \mathrm{...}, \mathbf{...}
+            const txtMatch = s.slice(pos).match(/^\\(?:text|textbf|textit|mathrm|mathbf|mathbb|mathcal|overline)\b/);
+            if (txtMatch) {
+                flushText();
+                pos += txtMatch[0].length;
+                const grp = readBracedGroup(s, pos);
+                pos = grp.nextPos;
+                nodes.push(...parseLatexToDocxMathNodes(grp.content));
+                continue;
+            }
+
+            // 6. Xử lý số mũ (^) và chỉ số dưới (_)
+            if (s[pos] === '^' || s[pos] === '_') {
+                const isSup = s[pos] === '^';
+                pos++;
+                const subSupGrp = readBracedGroup(s, pos);
+                pos = subSupGrp.nextPos;
+
+                if (isSup && (subSupGrp.content === '\\circ' || subSupGrp.content === '°')) {
+                    textBuf += '°';
+                    continue;
+                }
+
+                // Tách phần tử cơ sở (base) ngay trước dấu ^ hoặc _
+                let baseNodes = [];
+                if (textBuf.length > 0) {
+                    const lastChar = textBuf.slice(-1);
+                    textBuf = textBuf.slice(0, -1);
+                    flushText();
+                    baseNodes = [new MathRun(lastChar)];
+                } else if (nodes.length > 0) {
+                    baseNodes = [nodes.pop()];
+                } else {
+                    baseNodes = [new MathRun('')];
+                }
+
+                if (isSup) {
+                    nodes.push(new MathSuperScript({
+                        children: baseNodes,
+                        superScript: parseLatexToDocxMathNodes(subSupGrp.content)
+                    }));
+                } else {
+                    nodes.push(new MathSubScript({
+                        children: baseNodes,
+                        subScript: parseLatexToDocxMathNodes(subSupGrp.content)
+                    }));
+                }
+                continue;
+            }
+
+            // 7. Xử lý các lệnh LaTeX bắt đầu bằng dấu \
+            if (s[pos] === '\\') {
+                if (s[pos + 1] === '\\') {
+                    textBuf += ' ';
+                    pos += 2;
+                    continue;
+                }
+                if (s[pos + 1] === '{' || s[pos + 1] === '}') {
+                    textBuf += s[pos + 1];
+                    pos += 2;
+                    continue;
+                }
+                const cmdMatch = s.slice(pos).match(/^\\[a-zA-Z]+/);
+                if (cmdMatch) {
+                    const cmd = cmdMatch[0];
+                    pos += cmd.length;
+                    // Nếu sau lệnh là khoảng trắng ngăn cách thì bỏ qua 1 khoảng trắng
+                    if (s[pos] === ' ') pos++;
+                    if (LATEX_SYMBOL_MAP[cmd] !== undefined) {
+                        textBuf += LATEX_SYMBOL_MAP[cmd];
+                    } else {
+                        // Bỏ dấu \ nếu gặp lệnh lạ để không bị in thừa ký hiệu
+                        textBuf += cmd.slice(1);
+                    }
+                    continue;
+                }
+                pos++;
+                continue;
+            }
+
+            // 8. Nhóm trong ngoặc nhọn { ... } đứng độc lập
+            if (s[pos] === '{') {
+                flushText();
+                const grp = readBracedGroup(s, pos);
+                pos = grp.nextPos;
+                nodes.push(...parseLatexToDocxMathNodes(grp.content));
+                continue;
+            }
+
+            if (s[pos] === '}') {
+                pos++;
+                continue;
+            }
+
+            textBuf += s[pos];
+            pos++;
+        }
+
+        flushText();
+        return nodes.length > 0 ? nodes : [new MathRun('')];
+    }
+
+    // Tạo đối tượng docx.Math hoàn chỉnh từ chuỗi LaTeX
+    function createWordMathObject(latexStr) {
+        const { Math: DocxMath, TextRun } = window.docx;
+        try {
+            const mathNodes = parseLatexToDocxMathNodes(latexStr);
+            return new DocxMath({ children: mathNodes });
+        } catch (e) {
+            return new TextRun({ text: latexToFlatString(latexStr), font: 'Cambria Math', italics: true, size: 24 });
+        }
+    }
+
+    // Làm sạch các ký hiệu Markdown thừa (###, ##, ---, ***) ở đầu dòng
+    function cleanMarkdownNoise(text) {
+        return text
+            .replace(/^\s*#{1,6}\s*/gm, '')
+            .replace(/^\s*[-*_]{3,}\s*$/gm, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1');
+    }
+
+    // Tách chuỗi văn bản có chứa $...$ hoặc $$...$$ thành các phần tử TextRun và DocxMath
+    function buildParagraphChildrenFromText(str, isBoldDefault = false) {
+        const { TextRun } = window.docx;
+        const cleanedStr = cleanMarkdownNoise(str);
+        const children = [];
+        const regex = /(\$\$[\s\S]+?\$\$|\$[^$]+?\$)/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(cleanedStr)) !== null) {
+            if (match.index > lastIndex) {
+                const plainPart = cleanMarkdownNoise(cleanedStr.slice(lastIndex, match.index));
+                if (plainPart) {
+                    children.push(new TextRun({
+                        text: plainPart,
+                        bold: isBoldDefault,
+                        size: 24,
+                        font: 'Times New Roman'
+                    }));
+                }
+            }
+            const rawLatex = match[0].replace(/^\$\$|\$\$$|^\$|\$$/g, '').trim();
+            if (rawLatex) {
+                children.push(createWordMathObject(rawLatex));
+            }
+            lastIndex = regex.lastIndex;
+        }
+
+        if (lastIndex < cleanedStr.length) {
+            const remainPart = cleanMarkdownNoise(cleanedStr.slice(lastIndex));
+            if (remainPart) {
+                children.push(new TextRun({
+                    text: remainPart,
+                    bold: isBoldDefault,
+                    size: 24,
+                    font: 'Times New Roman'
+                }));
+            }
+        }
+        return children;
+    }
+
+    // Trích xuất toàn bộ lời giải từ #solutionOutput sang danh sách các dòng Paragraph của Word
+    function extractSolutionParagraphsForWord() {
+        const { Paragraph, TextRun } = window.docx;
+        const outputEl = document.getElementById('solutionOutput');
+        const clone = outputEl.cloneNode(true);
+
+        // Chuyển toàn bộ các khối .katex đã render về lại thẻ đánh dấu chứa mã LaTeX gốc
+        clone.querySelectorAll('.katex-display, .katex').forEach(katexNode => {
+            if (katexNode.classList.contains('katex') && katexNode.closest('.katex-display')) return;
+            const annotation = katexNode.querySelector('annotation[encoding="application/x-tex"]');
+            const rawTex = annotation ? annotation.textContent : katexNode.textContent;
+            const marker = document.createElement('span');
+            marker.setAttribute('data-raw-latex', rawTex.trim());
+            katexNode.replaceWith(marker);
+        });
+
+        clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+
+        const lines = [];
+        let currentChildren = [];
+
+        function flushLine() {
+            if (currentChildren.length > 0) {
+                lines.push(currentChildren);
+                currentChildren = [];
+            }
+        }
+
+        function walk(node, isBold = false) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const parts = node.textContent.split('\n');
+                parts.forEach((part, idx) => {
+                    const trimmedCheck = part.replace(/^\s*#{1,6}\s*$/, '').trim();
+                    if (trimmedCheck) {
+                        const cleaned = cleanMarkdownNoise(part);
+                        if (cleaned) {
+                            currentChildren.push(...buildParagraphChildrenFromText(cleaned, isBold));
+                        }
+                    }
+                    if (idx < parts.length - 1) flushLine();
+                });
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const tag = node.tagName.toUpperCase();
+                if (node.hasAttribute('data-raw-latex')) {
+                    const tex = node.getAttribute('data-raw-latex');
+                    if (tex) currentChildren.push(createWordMathObject(tex));
+                    return;
+                }
+
+                const nextBold = isBold || tag === 'STRONG' || tag === 'B' || /^H[1-6]$/.test(tag);
+                const isBlock = ['P', 'DIV', 'LI', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4'].includes(tag);
+
+                if (isBlock) flushLine();
+                if (tag === 'LI') {
+                    currentChildren.push(new TextRun({ text: '• ', bold: true, size: 24, font: 'Times New Roman' }));
+                }
+                node.childNodes.forEach(child => walk(child, nextBold));
+                if (isBlock) flushLine();
+            }
+        }
+
+        walk(clone, false);
+        flushLine();
+
+        return lines.map(children => new Paragraph({
+            spacing: { after: 140, line: 360 },
+            children: children
+        }));
+    }
+
+    function dataUrlToUint8Array(dataUrl) {
+        const base64 = dataUrl.split(',')[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // 3. HÀM XUẤT FILE WORD (.DOCX) VỚI CÔNG THỨC OMML 2 TẦNG CHUẨN WORD
+    async function exportToWord() {
+        const btn = document.getElementById('exportWordBtn');
+        if (!window.docx || !window.saveAs) {
+            showToast('Thư viện xuất Word đang tải, vui lòng thử lại sau giây lát!', 'error');
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Đang tạo Word...';
+
+        try {
+            const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle } = window.docx;
+            const docChildren = [];
+
+            // Tiêu đề chính
+            docChildren.push(
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 120 },
+                    children: [
+                        new TextRun({
+                            text: 'HHKT3D - LỜI GIẢI VÀ HÌNH VẼ 3D',
+                            bold: true,
+                            size: 32,
+                            color: '1D4ED8',
+                            font: 'Times New Roman'
+                        })
+                    ]
+                }),
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 },
+                    border: {
+                        bottom: { color: '93C5FD', space: 6, style: BorderStyle.SINGLE, size: 8 }
+                    },
+                    children: [
+                        new TextRun({
+                            text: `Ngày xuất: ${new Date().toLocaleString('vi-VN')}`,
+                            italics: true,
+                            size: 20,
+                            color: '64748B',
+                            font: 'Times New Roman'
+                        })
+                    ]
+                })
+            );
+
+            // MỤC I: ĐỀ BÀI TOÁN
+            docChildren.push(
+                new Paragraph({
+                    spacing: { before: 200, after: 120 },
+                    children: [
+                        new TextRun({
+                            text: 'I. ĐỀ BÀI TOÁN',
+                            bold: true,
+                            size: 26,
+                            color: '0F172A',
+                            font: 'Times New Roman'
+                        })
+                    ]
+                })
+            );
+
+            const problemText = document.getElementById('problemInput').value.trim();
+            if (problemText) {
+                docChildren.push(
+                    new Paragraph({
+                        spacing: { after: 160, line: 340 },
+                        children: buildParagraphChildrenFromText(problemText, false)
+                    })
+                );
+            }
+
+            // Ảnh đề bài (nếu có upload)
+            const previewImg = document.getElementById('imagePreview');
+            if (uploadedImageBase64 && previewImg && !previewImg.classList.contains('hidden')) {
+                const fullProbDataUrl = `data:${uploadedImageMime || 'image/jpeg'};base64,${uploadedImageBase64}`;
+                const natW = previewImg.naturalWidth || 500;
+                const natH = previewImg.naturalHeight || 300;
+                const targetW = Math.min(460, natW);
+                const targetH = Math.round((natH / natW) * targetW);
+
+                docChildren.push(
+                    new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 100, after: 200 },
+                        children: [
+                            new ImageRun({
+                                data: dataUrlToUint8Array(fullProbDataUrl),
+                                transformation: { width: targetW, height: targetH }
+                            })
+                        ]
+                    })
+                );
+            }
+
+            // MỤC II: HÌNH VẼ MÔ HÌNH 3D
+            docChildren.push(
+                new Paragraph({
+                    spacing: { before: 240, after: 120 },
+                    children: [
+                        new TextRun({
+                            text: 'II. HÌNH VẼ MINH HỌA MÔ HÌNH 3D',
+                            bold: true,
+                            size: 26,
+                            color: '0F172A',
+                            font: 'Times New Roman'
+                        })
+                    ]
+                })
+            );
+
+            const snapshot = await capture3DSnapshot();
+            const imgWidth = 480;
+            const imgHeight = Math.round((snapshot.height / snapshot.width) * imgWidth);
+
+            docChildren.push(
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 100, after: 240 },
+                    children: [
+                        new ImageRun({
+                            data: dataUrlToUint8Array(snapshot.dataUrl),
+                            transformation: { width: imgWidth, height: imgHeight }
+                        })
+                    ]
+                })
+            );
+
+            // MỤC III: LỜI GIẢI CHI TIẾT
+            docChildren.push(
+                new Paragraph({
+                    spacing: { before: 240, after: 140 },
+                    children: [
+                        new TextRun({
+                            text: 'III. LỜI GIẢI CHI TIẾT',
+                            bold: true,
+                            size: 26,
+                            color: '0F172A',
+                            font: 'Times New Roman'
+                        })
+                    ]
+                })
+            );
+
+            const solutionParagraphs = extractSolutionParagraphsForWord();
+            docChildren.push(...solutionParagraphs);
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: docChildren
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const docxBlob = new Blob([blob], {
+                type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
+            window.saveAs(docxBlob, `HHKT3D_LoiGiai_${Date.now()}.docx`);
+            showToast('Đã xuất file Word (.docx) với khung công thức Toán chuẩn!', 'success');
+        } catch (err) {
+            console.error('Lỗi xuất file Word:', err);
+            showToast('Không thể xuất file Word: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    // 4. HÀM XUẤT FILE PDF (.PDF) - ĐÃ FIX LỖI LỆCH PHÂN SỐ, CĂN THỨC & DẤU GÓC KATEX
+    async function prepareKatexForHtml2Canvas(rootEl) {
+        const svgs = Array.from(rootEl.querySelectorAll('.katex svg'));
+        for (const svg of svgs) {
+            const parent = svg.parentElement;
+            if (!parent) continue;
+
+            const parentRect = parent.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+            const w = parentRect.width || svgRect.width;
+            const h = parentRect.height || svgRect.height;
+            if (w <= 0 || h <= 0) continue;
+
+            // Xử lý cắt chuẩn viewBox cho dấu căn (\sqrt) và vectơ (\overrightarrow) dùng width="400em"
+            const par = svg.getAttribute('preserveAspectRatio') || '';
+            const vb = svg.getAttribute('viewBox');
+            if (vb && par.includes('slice')) {
+                const parts = vb.trim().split(/[\s,]+/).map(Number);
+                if (parts.length === 4 && parts[3] > 0) {
+                    const slicedVbW = Math.max(1, Math.round(parts[3] * (w / h)));
+                    svg.setAttribute('viewBox', `${parts[0]} ${parts[1]} ${slicedVbW} ${parts[3]}`);
+                    svg.setAttribute('preserveAspectRatio', 'none');
+                }
+            }
+
+            svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svg.setAttribute('width', `${w}px`);
+            svg.setAttribute('height', `${h}px`);
+
+            svg.querySelectorAll('path').forEach(p => {
+                const fill = p.getAttribute('fill');
+                if (!fill || fill === 'currentColor' || fill === 'inherit') {
+                    p.setAttribute('fill', '#0f172a');
+                }
+            });
+
+            // Rasterize SVG của KaTeX (dấu góc \widehat, dấu căn \sqrt) sang Canvas 3x sắc nét
+            const xml = new XMLSerializer().serializeToString(svg);
+            const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+
+            await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    const dpr = 3;
+                    c.width = Math.max(1, Math.ceil(w * dpr));
+                    c.height = Math.max(1, Math.ceil(h * dpr));
+                    c.style.width = `${w}px`;
+                    c.style.height = `${h}px`;
+                    c.style.display = 'block';
+                    c.style.position = 'absolute';
+                    c.style.left = '0';
+                    c.style.top = '0';
+                    const ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, c.width, c.height);
+                    svg.replaceWith(c);
+                    svg.replaceWith(c);
+                    const curRect = c.getBoundingClientRect();
+                    c.style.left = `${svgRect.left - curRect.left}px`;
+                    c.style.top = `${svgRect.top - curRect.top}px`;
+                    resolve();
+                    resolve();
+                };
+                img.onerror = () => resolve();
+                img.src = svgDataUrl;
+            });
+        }
+    }
+
+    async function exportToPDF() {
+        const btn = document.getElementById('exportPdfBtn');
+        if (!window.html2canvas || !window.jspdf) {
+            showToast('Thư viện xuất PDF đang tải, vui lòng thử lại sau giây lát!', 'error');
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Đang tạo PDF...';
+
+        let printContainer = null;
+        let fixStyleTag = null;
+        try {
+            // Khắc phục xung đột giữa Tailwind CSS (img { display: block }) và bộ đo baseline chữ của html2canvas
+            fixStyleTag = document.createElement('style');
+            fixStyleTag.innerHTML = `
+                img:not([class]) {
+                    display: inline !important;
+                    vertical-align: baseline !important;
+                }
+                #pdfPrintWrapper .katex {
+                    line-height: 1.2 !important;
+                }
+                #pdfPrintWrapper .katex .frac-line {
+                    border-bottom-style: solid !important;
+                    border-bottom-width: 1px !important;
+                    border-color: #0f172a !important;
+                }
+            `;
+            document.head.appendChild(fixStyleTag);
+
+            const snapshot = await capture3DSnapshot();
+            const problemText = document.getElementById('problemInput').value.trim();
+            const solutionHtml = document.getElementById('solutionOutput').innerHTML
+                .replace(/#{2,6}\s*/g, '');
+
+            printContainer = document.createElement('div');
+            printContainer.id = 'pdfPrintWrapper';
+            printContainer.style.cssText = `
+                position: fixed;
+                left: -9999px;
+                top: 0;
+                width: 794px;
+                background: #ffffff;
+                color: #0f172a;
+                padding: 40px 48px;
+                font-family: "Times New Roman", "Segoe UI", serif;
+                line-height: 1.65;
+                z-index: -1;
+            `;
+
+            const probImgHtml = (uploadedImageBase64 && !document.getElementById('imagePreview').classList.contains('hidden'))
+                ? `<div style="margin-top: 12px; text-align: center;">
+                       <img src="data:${uploadedImageMime || 'image/jpeg'};base64,${uploadedImageBase64}" style="max-width: 90%; max-height: 260px; border-radius: 6px; border: 1px solid #cbd5e1; display: inline-block;" />
+                   </div>`
+                : '';
+
+            printContainer.innerHTML = `
+                <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 14px; margin-bottom: 22px;">
+                    <h1 style="font-size: 22px; font-weight: 800; color: #1d4ed8; margin: 0; letter-spacing: 0.5px;">
+                        HHKT3D - LỜI GIẢI VÀ HÌNH VẼ 3D
+                    </h1>
+                    <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">
+                        Trợ Lý Giải Toán Hình Học Không Gian 3D Với AI • Ngày xuất: ${new Date().toLocaleString('vi-VN')}
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h2 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; text-transform: uppercase;">
+                        I. Đề bài toán
+                    </h2>
+                    <div id="pdfProblemContent" style="font-size: 15px; background: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; color: #1e293b;">
+                        ${problemText ? problemText.replace(/\n/g, '<br>') : '<i>(Đề bài từ hình ảnh đính kèm)</i>'}
+                    </div>
+                    ${probImgHtml}
+                </div>
+
+                <div style="margin-bottom: 22px;">
+                    <h2 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; text-transform: uppercase;">
+                        II. Hình vẽ minh họa mô hình 3D
+                    </h2>
+                    <div style="text-align: center; background: #070a12; padding: 12px; border-radius: 10px; border: 1px solid #1e293b;">
+                        <img src="${snapshot.dataUrl}" style="max-width: 100%; max-height: 340px; object-fit: contain; margin: 0 auto; display: block;" />
+                    </div>
+                </div>
+
+                <div>
+                    <h2 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 10px 0; text-transform: uppercase;">
+                        III. Lời giải chi tiết
+                    </h2>
+                    <div id="pdfSolutionContent" style="font-size: 15px; color: #0f172a; padding: 4px 2px;">
+                        ${solutionHtml}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(printContainer);
+
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(printContainer.querySelector('#pdfProblemContent'), {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            // Đợi trình duyệt dựng xong layout rồi chuẩn hóa seluruh SVG KaTeX (dấu góc, dấu căn)
+            await new Promise(r => setTimeout(r, 100));
+            await prepareKatexForHtml2Canvas(printContainer);
+
+            const canvas = await window.html2canvas(printContainer, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidthMm = pageWidth;
+            const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+
+            let heightLeft = imgHeightMm;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidthMm, imgHeightMm);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 2) {
+                position = heightLeft - imgHeightMm;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidthMm, imgHeightMm);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`HHKT3D_LoiGiai_${Date.now()}.pdf`);
+            showToast('Đã xuất file PDF (.pdf) thành công!', 'success');
+        } catch (err) {
+            console.error('Lỗi xuất file PDF:', err);
+            showToast('Không thể xuất file PDF: ' + err.message, 'error');
+        } finally {
+            if (fixStyleTag && fixStyleTag.parentNode) {
+                fixStyleTag.parentNode.removeChild(fixStyleTag);
+            }
+            if (printContainer && printContainer.parentNode) {
+                printContainer.parentNode.removeChild(printContainer);
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+</script>
+</body>
+</html>
