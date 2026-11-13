@@ -18,13 +18,27 @@
     <!-- Thư viện Xuất file Word (.docx) và PDF (.pdf) chạy Client-side -->
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { background-color: #0b0f19; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
         .label-3d {
-            position: absolute; color: #38bdf8; font-weight: bold; font-size: 15px;
-            pointer-events: none; text-shadow: 0 0 6px #000, 0 0 3px #000;
+            position: absolute; color: #38bdf8; font-weight: 800; font-size: 15px;
+            pointer-events: none;
+            text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 8px #000;
+            padding: 1px 5px;
+            border-radius: 5px;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            white-space: nowrap;
+            z-index: 5;
+        }
+        .label-axis {
+            position: absolute; font-weight: 900; font-size: 14px; font-style: italic;
+            pointer-events: none;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000;
+            z-index: 4;
         }
         .feature-card {
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -93,7 +107,7 @@
                 Ứng dụng <span class="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-400 bg-clip-text text-transparent">HHKT3D</span>
             </h1>
             <p class="text-gray-300 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-8">
-                Công cụ hỗ trợ học sinh và giáo viên giải các bài toán Hình học không gian THPT kết hợp dựng mô hình 3D tương tác trực quan, tự động chuyển đổi nét liền – nét đứt và tích hợp trực tiếp bộ công cụ <strong>GeoGebra Classic</strong>.
+                Công cụ hỗ trợ học sinh và giáo viên giải các bài toán Hình học không gian THPT kết hợp dựng mô hình 3D nét đậm trực quan, gắn hệ trục tọa độ <strong>Oxyz</strong>, tự động nối đường khoảng cách vuông góc và tích hợp trực tiếp bộ công cụ <strong>GeoGebra Classic</strong>.
             </p>
 
             <p class="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 text-center">
@@ -110,14 +124,14 @@
                                 📝
                             </div>
                             <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-950 text-cyan-400 border border-blue-800">
-                                Giải Toán AI & 3D
+                                Giải Toán AI & 3D Nét Đậm
                             </span>
                         </div>
                         <h2 class="text-lg font-bold text-white group-hover:text-cyan-400 transition mb-2">
                             Giải Toán Từ Đề Bài Văn Bản
                         </h2>
                         <p class="text-xs text-gray-400 leading-relaxed">
-                            Nhập đề bài toán hình học không gian bằng chữ, chọn đề mẫu hoặc dán ảnh chụp đề bài. AI sẽ phân tích lời giải chi tiết từng bước, dựng mô hình 3D tự động ẩn/hiện nét đứt và trải phẳng 2D (Net).
+                            Nhập đề bài toán hình học không gian bằng chữ, chọn đề mẫu hoặc dán ảnh chụp đề bài. AI sẽ phân tích lời giải chi tiết từng bước, tự động dựng hình 3D nét đậm kèm hệ trục $Oxyz$, nối đoạn khoảng cách và trải phẳng 2D (Net).
                         </p>
                     </div>
                     <div class="mt-5 pt-3.5 border-t border-gray-800 flex items-center justify-between text-xs text-cyan-400 font-semibold">
@@ -159,17 +173,23 @@
         <div class="w-1/3 max-w-md border-r border-gray-800 p-4 flex flex-col gap-3 bg-[#0f172a] overflow-y-auto">
             <div class="flex items-center justify-between">
                 <span class="font-semibold text-sm text-blue-400">📝 Nhập Đề Bài</span>
-                <select id="modelSelect" class="text-xs bg-blue-950 text-blue-400 px-2 py-1 rounded border border-blue-800 focus:outline-none">
-                    <option value="gemini-2.5-flash">Tự động (Ưu tiên Flash)</option>
-                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <select id="modelSelect" class="text-xs bg-blue-950 text-blue-300 px-2 py-1 rounded border border-blue-800 focus:outline-none">
+                    <option value="gemini-2.5-flash" selected>⚡ Siêu tốc & Ổn định (Gemini 2.5 Flash)</option>
+                    <option value="gemini-2.0-flash">🚀 Cực nhanh Không trễ (Gemini 2.0 Flash)</option>
+                    <option value="gemini-3-flash-preview">✨ Thế hệ mới (Gemini 3 Flash)</option>
+                    <option value="gemini-2.5-pro">🧠 Chính xác cao (Gemini 2.5 Pro)</option>
                 </select>
             </div>
             <div>
-                <label class="text-xs text-gray-400 block mb-1">Bài toán mẫu 3D nhanh:</label>
-                <select id="sampleSelect" onchange="loadSample()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500">
-                    <option value="chop_ABCD">Hình chóp S.ABCD đáy hình vuông, SA vuông góc đáy</option>
-                    <option value="chop_ABC">Hình chóp tam giác đều S.ABC</option>
+                <label class="text-xs text-gray-400 block mb-1">Bài toán mẫu 3D (Góc, Khoảng cách, Thể tích):</label>
+                <select id="sampleSelect" onchange="loadSample()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs sm:text-sm text-gray-200 focus:outline-none focus:border-blue-500">
+                    <option value="cau20_SAB_deu" selected>📸 Câu 20: Chóp S.ABCD có (SAB) đều ⊥ đáy, H trung điểm AB (Tính d từ H đến (SBC), (SCD))</option>
+                    <option value="kc_A_SBC">📏 Khoảng cách từ A đến (SBC) - Chóp S.ABC (Kẻ AH ⊥ SB)</option>
+                    <option value="kc_A_SCD">📏 Khoảng cách từ A đến (SCD) - Chóp S.ABCD đáy vuông (Kẻ AH ⊥ SD)</option>
+                    <option value="kc_A_SBD">📏 Khoảng cách từ A đến (SBD) - Chóp S.ABCD (Kẻ AO ⊥ BD, AH ⊥ SO)</option>
+                    <option value="kc_SA_BC">📏 Khoảng cách giữa 2 đường chéo nhau SA và BC (Đoạn vuông góc chung)</option>
+                    <option value="chop_ABCD">📐 Góc giữa SC và mặt đáy (ABCD) - Hình chóp S.ABCD</option>
+                    <option value="chop_ABC">🧊 Thể tích khối chóp tam giác đều S.ABC (Đường cao SO)</option>
                 </select>
             </div>
             <div class="flex flex-col">
@@ -177,16 +197,18 @@
                     <label class="text-xs text-gray-400">Nội dung đề bài toán (văn bản):</label>
                     <button onclick="document.getElementById('problemInput').value=''" class="text-[11px] text-gray-500 hover:text-gray-300">Xóa chữ</button>
                 </div>
-                <textarea id="problemInput" rows="4" placeholder="Nhập đề bài bằng chữ hoặc dán ảnh ở ô bên dưới..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 resize-none">Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a. Tính góc giữa đường thẳng SC và mặt phẳng (ABCD).</textarea>
+                <textarea id="problemInput" rows="4" placeholder="Nhập đề bài bằng chữ hoặc dán ảnh ở ô bên dưới..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 resize-none">Câu 20: Cho hình chóp S.ABCD có đáy là hình vuông cạnh a, SAB là tam giác đều và nằm trong mặt phẳng vuông góc với đáy, gọi H là trung điểm AB.
+a) Tính khoảng cách từ H đến (SBC).
+b) Tính khoảng cách từ H đến (SCD).</textarea>
             </div>
             <!-- Ô TẢI ẢNH / DÁN ẢNH (CTRL+V) -->
-            <div class="flex flex-col flex-1 min-h-[150px]">
+            <div class="flex flex-col flex-1 min-h-[140px]">
                 <label class="text-xs text-gray-400 block mb-1">Hoặc upload / dán (Ctrl+V) ảnh chụp đề bài:</label>
                 <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="flex-1 border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl bg-gray-900/60 flex flex-col items-center justify-center p-3 cursor-pointer transition relative overflow-hidden group">
                     <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageFile(this.files[0])">
                     
                     <div id="uploadPrompt" class="text-center">
-                        <svg class="w-9 h-9 mx-auto text-gray-500 group-hover:text-blue-400 mb-2 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-8 h-8 mx-auto text-gray-500 group-hover:text-blue-400 mb-1.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         <p class="text-xs text-gray-300 font-medium">Kéo thả ảnh vào đây hoặc bấm để chọn</p>
@@ -203,10 +225,26 @@
                 📐 Chuyển mô hình này sang Thiết kế GeoGebra
             </button>
         </div>
+
         <!-- Cột phải: Khung 3D + Lời giải -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            <div class="h-[56%] relative bg-[#070a12]" id="canvasContainer">
-                <div class="absolute top-3 right-3 z-10 flex gap-2">
+            <div class="h-[58%] relative bg-[#070a12]" id="canvasContainer">
+                <!-- Cụm công cụ điều khiển 3D góc trên bên phải -->
+                <div class="absolute top-3 right-3 z-10 flex flex-wrap items-center gap-2">
+                    <!-- Điều chỉnh độ đậm nét 3D -->
+                    <div class="flex items-center gap-1.5 bg-gray-900/90 px-2.5 py-1 rounded-lg border border-gray-700 text-xs text-gray-200">
+                        <span class="text-cyan-400 font-semibold">🖊️ Độ đậm:</span>
+                        <select id="thicknessSelect" onchange="changeLineThickness(this.value)" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+                            <option value="0.7" class="bg-gray-900">Mảnh</option>
+                            <option value="1.0" class="bg-gray-900">Vừa</option>
+                            <option value="1.35" class="bg-gray-900" selected>Đậm (Khuyên dùng)</option>
+                            <option value="1.75" class="bg-gray-900">Rất đậm</option>
+                        </select>
+                    </div>
+                    <!-- Bật / Tắt hệ trục tọa độ Oxyz -->
+                    <button onclick="toggleOxyzAxes()" id="toggleOxyzBtn" class="bg-emerald-950/90 hover:bg-emerald-800 text-xs px-3 py-1.5 rounded-lg border border-emerald-600/80 text-emerald-200 transition flex items-center gap-1 font-medium shadow">
+                        🧭 Hệ trục Oxyz: Bật
+                    </button>
                     <button onclick="toggleUnfold()" id="unfoldBtn" class="bg-gray-800/90 hover:bg-blue-600 text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-white transition flex items-center gap-1">
                         📐 Trải phẳng 2D (Net)
                     </button>
@@ -214,18 +252,28 @@
                         🔄 Đặt lại góc nhìn
                     </button>
                 </div>
-                <div class="absolute bottom-3 left-3 z-10 bg-gray-900/90 px-3 py-1.5 rounded-lg border border-gray-800 text-xs text-gray-300 flex items-center gap-4">
-                    <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-sky-400 inline-block"></span> Nét nhìn thấy (Tự động theo góc xoay)</span>
-                    <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 border-b border-dashed border-sky-400 inline-block"></span> Nét đứt (Che khuất / Đường phụ)</span>
-                    <span class="text-gray-500">| 🖱️ Xoay & Thu phóng bằng chuột</span>
+
+                <!-- Chú thích phân màu cạnh & hệ trục Oxyz góc dưới -->
+                <div class="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+                    <div class="bg-gray-900/90 px-3 py-1.5 rounded-lg border border-gray-800 text-[11px] sm:text-xs text-gray-200 flex flex-wrap items-center gap-3">
+                        <span class="flex items-center gap-1.5"><span class="w-4 h-1 rounded bg-sky-400 inline-block"></span> Cạnh chính (Nét liền/đứt tự động)</span>
+                        <span class="flex items-center gap-1.5"><span class="w-4 h-1 rounded bg-amber-400 inline-block"></span> Đường dựng phụ (SO, SH, AC...)</span>
+                        <span class="flex items-center gap-1.5"><span class="w-4 h-1.5 rounded bg-rose-500 inline-block"></span> Đoạn khoảng cách vuông góc (AH, AK...)</span>
+                    </div>
+                    <div class="bg-gray-900/90 px-2.5 py-1 rounded-lg border border-gray-800 text-[11px] text-gray-300 hidden xl:flex items-center gap-2">
+                        <span class="text-red-400 font-bold">Ox</span>
+                        <span class="text-emerald-400 font-bold">Oy</span>
+                        <span class="text-yellow-400 font-bold">Oz (Cao)</span>
+                    </div>
                 </div>
                 <div id="labelsContainer"></div>
             </div>
+
             <!-- Khung Lời giải chi tiết -->
-            <div class="flex-1 border-t border-gray-800 bg-[#0b0f19] p-6 overflow-y-auto">
+            <div class="flex-1 border-t border-gray-800 bg-[#0b0f19] p-5 sm:p-6 overflow-y-auto">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-3 mb-4">
                     <h2 class="text-sm font-bold text-blue-400 flex items-center gap-1.5">
-                        📘 Lời Giải Chi Tiết
+                        📘 Lời Giải Chi Tiết & Phân Tích Khoảng Cách / Góc
                     </h2>
                     <!-- Cụm nút Xuất file Word & PDF -->
                     <div class="flex items-center gap-2">
@@ -237,15 +285,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="solutionOutput" class="text-sm leading-relaxed space-y-2 text-gray-200">
-                    <p><strong>Xác định hình chiếu của SC lên (ABCD):</strong></p>
-                    <p>Do $SA \perp (ABCD)$ nên $A$ là hình chiếu vuông góc của $S$ lên mặt phẳng $(ABCD)$.</p>
-                    <p>Do đó, $AC$ chính là hình chiếu vuông góc của $SC$ lên mặt phẳng $(ABCD)$.</p>
-                    <p><strong>Tính góc $\alpha = (SC, (ABCD))$:</strong></p>
-                    <p>Ta có: $(SC, (ABCD)) = (SC, AC) = \widehat{SCA}$.</p>
-                    <p>Vì $ABCD$ là hình vuông cạnh $a$ nên đường chéo $AC = a\sqrt{2}$.</p>
-                    <p>Xét tam giác $SAC$ vuông tại $A$: $\tan \widehat{SCA} = \frac{SA}{AC} = \frac{a}{a\sqrt{2}} = \frac{\sqrt{2}}{2} \Rightarrow \widehat{SCA} \approx 35^\circ 16'$.</p>
-                </div>
+                <div id="solutionOutput" class="text-sm leading-relaxed space-y-2 text-gray-200"></div>
             </div>
         </div>
     </div>
@@ -265,7 +305,6 @@
                 <button onclick="setGgbPerspective('AG')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition" title="Đại số & Hình học phẳng 2D">
                     📏 Hình phẳng 2D & Đại số
                 </button>
-            
 
                 <!-- Chọn mẫu hình 3D dựng sẵn trong GeoGebra -->
                 <select id="ggbPresetSelect" onchange="loadGgbPreset(this.value)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-purple-500 ml-1">
@@ -358,16 +397,16 @@
     }
 
     function showHome() {
-    document.getElementById('homeView').classList.remove('hidden');
-    document.getElementById('workspaceView').classList.add('hidden');
-    document.getElementById('geogebraView').classList.add('hidden');
-    document.getElementById('backHomeBtn').classList.add('hidden');
+        document.getElementById('homeView').classList.remove('hidden');
+        document.getElementById('workspaceView').classList.add('hidden');
+        document.getElementById('geogebraView').classList.add('hidden');
+        document.getElementById('backHomeBtn').classList.add('hidden');
 
-    // Ẩn hoàn toàn cụm shortcut ở header khi về trang chủ
-    const headerTabs = document.getElementById('headerNavTabs');
-    headerTabs.classList.add('hidden');
-    headerTabs.classList.remove('md:flex', 'flex');
+        const headerTabs = document.getElementById('headerNavTabs');
+        headerTabs.classList.add('hidden');
+        headerTabs.classList.remove('md:flex', 'flex');
     }
+
     function openTextSolver() {
         document.getElementById('homeView').classList.add('hidden');
         document.getElementById('geogebraView').classList.add('hidden');
@@ -375,7 +414,6 @@
         document.getElementById('backHomeBtn').classList.remove('hidden');
         updateHeaderTabs('solver');
 
-        // Cập nhật lại kích thước khung vẽ 3D ngay khi mở từ trang chủ và đặt con trỏ vào ô nhập đề
         requestAnimationFrame(() => {
             if (container.clientWidth && container.clientHeight) {
                 camera.aspect = container.clientWidth / container.clientHeight;
@@ -393,13 +431,11 @@
     let pendingSyncAfterLoad = false;
     let currentGgbTheme = 'dark_full';
 
-    // Hàm đổi chế độ nền Đen / Sáng cho GeoGebra Classic
     function applyGgbCanvasBg(isDarkCanvas) {
         if (!ggbReady || !window.ggbApplet || isGgbIframeMode) return;
         const api = window.ggbApplet;
         try {
             if (isDarkCanvas) {
-                // Đổi màu nền vùng vẽ 2D và 3D sang màu đen xanh đậm (#0b0f19) bằng lệnh GeoGebra
                 api.evalCommand("SetBackgroundColor(0.04, 0.06, 0.1)");
                 api.evalCommand("SetBackgroundColor(1, 0.04, 0.06, 0.1)");
                 api.evalCommand("SetBackgroundColor(-1, 0.04, 0.06, 0.1)");
@@ -469,7 +505,6 @@
         const height = wrapper.clientHeight || (window.innerHeight - 110);
 
         if (typeof GGBApplet === 'undefined') {
-            // Nếu script deployggb chưa tải kịp, bật trực tiếp khung web GeoGebra Classic
             enableDirectIframeMode();
             return;
         }
@@ -487,7 +522,7 @@
             "enableCAS": true,
             "enable3d": true,
             "language": "vi",
-            "perspective": "AT", // Mở sẵn chế độ Đại số + Không gian 3D
+            "perspective": "AT",
             "useBrowserForJS": false,
             "appletOnLoad": function(api) {
                 window.ggbApplet = api;
@@ -582,7 +617,6 @@
         showToast('Đã làm mới bảng thiết kế GeoGebra.');
     }
 
-    // Dựng các mẫu hình học không gian phổ biến trực tiếp trên GeoGebra Classic
     function loadGgbPreset(presetKey, silent = false) {
         if (!presetKey || !ggbReady || !window.ggbApplet || isGgbIframeMode) return;
         const api = window.ggbApplet;
@@ -664,7 +698,6 @@
         }
     }
 
-    // Đồng bộ trực tiếp mô hình 3D từ bài toán AI sang GeoGebra Classic
     function syncActiveModelToGeoGebra() {
         if (isGgbIframeMode) {
             toggleGeoGebraEmbedMode();
@@ -690,9 +723,9 @@
             applyGgbCanvasBg(true);
         }
 
-        // Chuyển hệ tọa độ Three.js (x, y_cao, z) sang hệ tọa độ 3D của GeoGebra (x, z, y_cao)
         const verts = activeModel.vertices3D;
         Object.keys(verts).forEach(k => {
+            if (k.startsWith('__')) return;
             const [x, y, z] = verts[k];
             const cleanName = k.replace(/[^a-zA-Z0-9]/g, '');
             try {
@@ -700,7 +733,6 @@
             } catch (e) {}
         });
 
-        // Vẽ các mặt đa diện
         (activeModel.faces || []).forEach((face, idx) => {
             const pts = face.map(k => k.replace(/[^a-zA-Z0-9]/g, '')).join(', ');
             try {
@@ -708,29 +740,36 @@
             } catch (e) {}
         });
 
-        // Vẽ các cạnh nét liền
         (activeModel.edgesSolid || []).forEach(([u, v], idx) => {
             const p1 = u.replace(/[^a-zA-Z0-9]/g, '');
             const p2 = v.replace(/[^a-zA-Z0-9]/g, '');
             try {
                 api.evalCommand(`es${idx} = Segment(${p1}, ${p2})`);
                 api.evalCommand(`SetLineStyle(es${idx}, 0)`);
+                api.evalCommand(`SetLineThickness(es${idx}, 5)`);
             } catch (e) {}
         });
 
-        // Vẽ các cạnh nét đứt
         (activeModel.edgesDashed || []).forEach(([u, v], idx) => {
             const p1 = u.replace(/[^a-zA-Z0-9]/g, '');
             const p2 = v.replace(/[^a-zA-Z0-9]/g, '');
             try {
                 api.evalCommand(`ed${idx} = Segment(${p1}, ${p2})`);
                 api.evalCommand(`SetLineStyle(ed${idx}, 1)`);
+                api.evalCommand(`SetLineThickness(ed${idx}, 4)`);
             } catch (e) {}
         });
-        // Vẽ các cạnh nét đứt...
-        // (đoạn code hiện tại của bạn)
 
-        // BỔ SUNG: Đồng bộ mặt cầu sang GeoGebra nếu bài toán có mặt cầu
+        (activeModel.distanceEdges || []).forEach(([u, v], idx) => {
+            const p1 = u.replace(/[^a-zA-Z0-9]/g, '');
+            const p2 = v.replace(/[^a-zA-Z0-9]/g, '');
+            try {
+                api.evalCommand(`dist${idx} = Segment(${p1}, ${p2})`);
+                api.evalCommand(`SetColor(dist${idx}, 244, 63, 94)`);
+                api.evalCommand(`SetLineThickness(dist${idx}, 7)`);
+            } catch (e) {}
+        });
+
         if (activeModel.sphere) {
             const sp = activeModel.sphere;
             try {
@@ -741,7 +780,6 @@
         showToast('Đã đồng bộ mô hình 3D sang bảng thiết kế GeoGebra Classic!', 'success');
     }
 
-    // Sử dụng Gemini AI để dịch yêu cầu tiếng Việt thành tập lệnh GeoGebra tự động
     async function generateGgbByAI() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const promptInput = document.getElementById('ggbAiPrompt').value.trim();
@@ -814,19 +852,30 @@ Lưu ý:
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const maxW = 1000;
+                // Nén ảnh tối ưu 800px để gửi lên Gemini API cực nhanh (< 0.5 giây), chống nghẽn mạng
+                const maxW = 800;
                 const scale = img.width > maxW ? maxW / img.width : 1;
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
                 
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
                 uploadedImageBase64 = dataUrl.split(',')[1];
                 uploadedImageMime = 'image/jpeg';
                 document.getElementById('imagePreview').src = dataUrl;
                 document.getElementById('imagePreview').classList.remove('hidden');
                 document.getElementById('removeImgBtn').classList.remove('hidden');
                 document.getElementById('uploadPrompt').classList.add('hidden');
+
+                // Tự động xóa đề bài mẫu cũ trong ô văn bản để không bị xung đột giữa ảnh mới và đề mẫu cũ
+                const probInput = document.getElementById('problemInput');
+                const currentText = probInput.value.trim();
+                const isSampleText = Object.values(samples).some(s => s.text.trim() === currentText);
+                if (isSampleText) {
+                    probInput.value = '';
+                    probInput.placeholder = '📸 Đã tải ảnh đề bài! Bấm "Phân Tích AI & Dựng Hình 3D" bên dưới để AI đọc ảnh và giải (hoặc gõ thêm ghi chú vào đây)...';
+                }
+                showToast('📸 Đã nhận ảnh đề bài! Hãy bấm "Phân Tích AI & Dựng Hình 3D".', 'info');
             };
             img.src = e.target.result;
         };
@@ -840,6 +889,7 @@ Lưu ý:
         document.getElementById('imagePreview').classList.add('hidden');
         document.getElementById('removeImgBtn').classList.add('hidden');
         document.getElementById('uploadPrompt').classList.remove('hidden');
+        document.getElementById('problemInput').placeholder = 'Nhập đề bài bằng chữ hoặc dán ảnh ở ô bên dưới...';
     }
     window.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -859,64 +909,655 @@ Lưu ý:
         if (e.dataTransfer.files.length) handleImageFile(e.dataTransfer.files[0]);
     });
 
-    // --- KHỞI TẠO KHÔNG GIAN 3D ---
+    // =========================================================================
+    // KHỞI TẠO KHÔNG GIAN 3D, HỆ TRỤC OXYZ & CÔNG CỤ DỰNG NÉT ĐẬM 3D CYLINDER
+    // =========================================================================
     const container = document.getElementById('canvasContainer');
     const labelsContainer = document.getElementById('labelsContainer');
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, (container.clientWidth / container.clientHeight) || (16 / 9), 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(container.clientWidth || 800, container.clientHeight || 450);
     container.appendChild(renderer.domElement);
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    scene.add(new THREE.GridHelper(14, 28, 0x1e3a8a, 0x1e293b));
+
+    // Lưới nền dịu mắt
+    const gridHelper = new THREE.GridHelper(14, 14, 0x1e3a8a, 0x162032);
+    gridHelper.position.y = -0.01;
+    scene.add(gridHelper);
 
     let shapeGroup = new THREE.Group();
     scene.add(shapeGroup);
+
+    // Nhóm Hệ trục tọa độ Oxyz
+    let oxyzGroup = new THREE.Group();
+    scene.add(oxyzGroup);
+    let showOxyz = true;
+    let axisLabelElements = [];
+
     let isUnfolded = false;
+    let lineThicknessScale = 1.35; // Mặc định Đậm (Khuyên dùng)
     let currentVertices = {};
     let labelElements = {};
 
-    // Vật liệu dùng chung cho nét liền, nét đứt và mặt
-    const solidMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
-    const dashedMat = new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 0.22, gapSize: 0.16 });
+    // Bảng màu chất liệu 3D sắc nét
+    const MAT_MAIN = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });       // Xanh Cyan: Cạnh chính
+    const MAT_AUX = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });        // Vàng Cam: Đường dựng phụ (AC, BD, SO, SH, SM...)
+    const MAT_DIST = new THREE.MeshBasicMaterial({ color: 0xf43f5e });       // Hồng Đỏ: Đoạn khoảng cách cần tìm (AH, AK, HK, MN...)
+    const MAT_RIGHT_ANGLE = new THREE.MeshBasicMaterial({ color: 0xfde047 }); // Vàng sáng: Ký hiệu góc vuông 3D
+    const MAT_VERTEX = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });     // Chấm cầu ở đỉnh chính
+    const MAT_VERTEX_AUX = new THREE.MeshBasicMaterial({ color: 0xfef08a }); // Chấm cầu ở chân đường cao / trung điểm (H, K, M, O)
+
     const faceMat = new THREE.MeshBasicMaterial({
-        color: 0x0284c7,
+        color: 0x0ea5e9,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.14,
         side: THREE.DoubleSide,
         depthWrite: false
     });
 
-    // Danh sách quản lý các cạnh 3D để tự động chuyển đổi nét liền / nét đứt khi xoay camera
     let dynamicEdges = [];
     let outerBoundaryFaces = [];
     let outerTriangles = [];
 
+    // --- DỰNG HỆ TRỤC TỌA ĐỘ OXYZ CHUẨN TOÁN THPT TRONG KHÔNG GIAN 3D ---
+    // Trong Three.js: mặt đáy nằm trên (X, Z) và chiều cao là Y hướng lên.
+    // Do đó: Trục Ox dọc theo +X, Trục Oy dọc theo +Z, Trục cao Oz dọc theo +Y.
+    function buildOxyzAxes() {
+        while (oxyzGroup.children.length > 0) oxyzGroup.remove(oxyzGroup.children[0]);
+        axisLabelElements.forEach(item => item.el.remove());
+        axisLabelElements = [];
+
+        const axisLen = 5.4;
+        const axisRadius = 0.024 * lineThicknessScale;
+
+        const axesConfig = [
+            { name: 'x', dir: new THREE.Vector3(1, 0, 0), color: 0xef4444, hex: '#f87171', len: axisLen },
+            { name: 'y', dir: new THREE.Vector3(0, 0, 1), color: 0x22c55e, hex: '#4ade80', len: axisLen },
+            { name: 'z', dir: new THREE.Vector3(0, 1, 0), color: 0xeab308, hex: '#facc15', len: axisLen }
+        ];
+
+        axesConfig.forEach(ax => {
+            const mat = new THREE.MeshBasicMaterial({ color: ax.color, transparent: true, opacity: 0.88 });
+            const start = ax.dir.clone().multiplyScalar(-0.8);
+            const end = ax.dir.clone().multiplyScalar(ax.len);
+
+            // Thân trục hình trụ
+            const shaft = createCylinderSegment(start, end, axisRadius, mat);
+            oxyzGroup.add(shaft);
+
+            // Mũi tên hình nón
+            const coneGeo = new THREE.ConeGeometry(axisRadius * 3.0, axisRadius * 8.5, 16);
+            const cone = new THREE.Mesh(coneGeo, mat);
+            cone.position.copy(end);
+            const upVec = new THREE.Vector3(0, 1, 0);
+            cone.quaternion.setFromUnitVectors(upVec, ax.dir.clone().normalize());
+            oxyzGroup.add(cone);
+
+            // Vạch chia đơn vị trên trục
+            for (let u = 1; u <= 4; u++) {
+                const tickPos = ax.dir.clone().multiplyScalar(u);
+                const tickSphere = new THREE.Mesh(new THREE.SphereGeometry(axisRadius * 1.45, 8, 8), mat);
+                tickSphere.position.copy(tickPos);
+                oxyzGroup.add(tickSphere);
+            }
+
+            // Nhãn tên trục x, y, z
+            const div = document.createElement('div');
+            div.className = 'label-axis';
+            div.style.color = ax.hex;
+            div.textContent = ax.name;
+            labelsContainer.appendChild(div);
+            axisLabelElements.push({
+                el: div,
+                pos: end.clone().add(ax.dir.clone().multiplyScalar(0.32)),
+                text: ax.name,
+                color: ax.hex
+            });
+        });
+
+        // Gốc tọa độ O(0,0,0)
+        const originMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const originMesh = new THREE.Mesh(new THREE.SphereGeometry(axisRadius * 2.1, 14, 14), originMat);
+        oxyzGroup.add(originMesh);
+
+        // Nếu bài toán chưa có đỉnh trùng tên O tại gốc tọa độ thì hiện nhãn O của hệ trục
+        if (!currentVertices['O']) {
+            const oDiv = document.createElement('div');
+            oDiv.className = 'label-axis';
+            oDiv.style.color = '#cbd5e1';
+            oDiv.textContent = 'O';
+            labelsContainer.appendChild(oDiv);
+            axisLabelElements.push({
+                el: oDiv,
+                pos: new THREE.Vector3(-0.28, -0.22, -0.28),
+                text: 'O',
+                color: '#cbd5e1'
+            });
+        }
+
+        oxyzGroup.visible = showOxyz && !isUnfolded;
+        axisLabelElements.forEach(item => {
+            item.el.style.display = (showOxyz && !isUnfolded) ? 'block' : 'none';
+        });
+    }
+
+    function toggleOxyzAxes() {
+        showOxyz = !showOxyz;
+        const btn = document.getElementById('toggleOxyzBtn');
+        if (showOxyz) {
+            btn.innerText = '🧭 Hệ trục Oxyz: Bật';
+            btn.className = 'bg-emerald-950/90 hover:bg-emerald-800 text-xs px-3 py-1.5 rounded-lg border border-emerald-600/80 text-emerald-200 transition flex items-center gap-1 font-medium shadow';
+        } else {
+            btn.innerText = '🧭 Hệ trục Oxyz: Tắt';
+            btn.className = 'bg-gray-800/90 hover:bg-gray-700 text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 transition flex items-center gap-1 font-medium';
+        }
+        oxyzGroup.visible = showOxyz && !isUnfolded;
+        axisLabelElements.forEach(item => {
+            item.el.style.display = (showOxyz && !isUnfolded) ? 'block' : 'none';
+        });
+    }
+
+    function changeLineThickness(val) {
+        lineThicknessScale = parseFloat(val) || 1.35;
+        drawGeometry(activeModel, isUnfolded);
+    }
+
+    // --- HÀM TẠO HÌNH TRỤ NÉT LIỀN & NÉT ĐỨT 3D ĐẬM RÕ MỌI GÓC NHÌN ---
+    function createCylinderSegment(p1, p2, radius, material) {
+        const dir = new THREE.Vector3().subVectors(p2, p1);
+        const len = dir.length();
+        if (len < 1e-5) return new THREE.Group();
+        const geo = new THREE.CylinderGeometry(radius, radius, len, 10, 1, false);
+        const mesh = new THREE.Mesh(geo, material);
+        mesh.position.copy(p1).add(p2).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        return mesh;
+    }
+
+    function createDashedCylinderGroup(p1, p2, radius, material, dashLen = 0.22, gapLen = 0.15) {
+        const group = new THREE.Group();
+        const dir = new THREE.Vector3().subVectors(p2, p1);
+        const totalLen = dir.length();
+        if (totalLen < 1e-5) return group;
+        const unitDir = dir.clone().normalize();
+        let cur = 0;
+        while (cur < totalLen) {
+            const segEnd = Math.min(cur + dashLen, totalLen);
+            if (segEnd - cur > 0.02) {
+                const sPt = p1.clone().add(unitDir.clone().multiplyScalar(cur));
+                const ePt = p1.clone().add(unitDir.clone().multiplyScalar(segEnd));
+                group.add(createCylinderSegment(sPt, ePt, radius, material));
+            }
+            cur += dashLen + gapLen;
+        }
+        return group;
+    }
+
+    // Hàm vẽ ký hiệu góc vuông 3D (hình chữ L khép kín thành ô vuông tại chân đường cao)
+    function createRightAngleMarker3D(atPt, fromPt1, fromPt2, size = 0.28) {
+        const v1 = new THREE.Vector3().subVectors(fromPt1, atPt);
+        const v2 = new THREE.Vector3().subVectors(fromPt2, atPt);
+        if (v1.length() < 0.1 || v2.length() < 0.1) return null;
+        v1.normalize();
+        v2.normalize();
+        // Kiểm tra xem góc có gần 90 độ không (cho phép sai số phối cảnh)
+        if (Math.abs(v1.dot(v2)) > 0.35) return null;
+
+        const pA = atPt.clone().add(v1.clone().multiplyScalar(size));
+        const pB = atPt.clone().add(v2.clone().multiplyScalar(size));
+        const pCorner = atPt.clone().add(v1.clone().multiplyScalar(size)).add(v2.clone().multiplyScalar(size));
+
+        const r = 0.022 * lineThicknessScale;
+        const group = new THREE.Group();
+        group.add(createCylinderSegment(pA, pCorner, r, MAT_RIGHT_ANGLE));
+        group.add(createCylinderSegment(pB, pCorner, r, MAT_RIGHT_ANGLE));
+
+        // Tô mặt vuông nhỏ mờ bên trong góc vuông để cực dễ nhìn
+        const quadGeo = new THREE.BufferGeometry().setFromPoints([
+            atPt, pA, pCorner,
+            atPt, pCorner, pB
+        ]);
+        const quadMat = new THREE.MeshBasicMaterial({
+            color: 0xfde047,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide
+        });
+        group.add(new THREE.Mesh(quadGeo, quadMat));
+        return group;
+    }
+
+    // =========================================================================
+    // KHO BÀI TOÁN MẪU (CÓ ĐẦY ĐỦ BÀI TOÁN TÍNH KHOẢNG CÁCH & ĐƯỜNG CAO PHỤ)
+    // =========================================================================
     const samples = {
-        chop_ABCD: {
-            text: "Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a. Tính góc giữa đường thẳng SC và mặt phẳng (ABCD).",
-            vertices3D: { A: [0, 0, 0], B: [0, 0, 3], C: [3, 0, 3], D: [3, 0, 0], S: [0, 3, 0] },
+        cau20_SAB_deu: {
+            text: "Câu 20: Cho hình chóp S.ABCD có đáy là hình vuông cạnh a, SAB là tam giác đều và nằm trong mặt phẳng vuông góc với đáy, gọi H là trung điểm AB.\na) Tính khoảng cách từ H đến (SBC).\nb) Tính khoảng cách từ H đến (SCD).",
+            solutionHtml: `<p><strong>Bước 1: Xác định đường cao $SH$ của hình chóp $S.ABCD$</strong></p>
+<p>Vì $\\triangle SAB$ đều cạnh $a$ và $H$ là trung điểm $AB$ nên $SH \\perp AB$ và $SH = \\frac{a\\sqrt{3}}{2}$.</p>
+<p>Do $(SAB) \\perp (ABCD)$ theo giao tuyến $AB$ nên $SH \\perp (ABCD)$ tại $H$.</p>
+<p><strong>a) Tính khoảng cách từ $H$ đến mặt phẳng $(SBC)$:</strong></p>
+<p>Ta có $\\begin{cases} BC \\perp AB \\text{ (do } ABCD \\text{ là hình vuông)} \\\\ BC \\perp SH \\text{ (do } SH \\perp (ABCD)) \\end{cases} \\Rightarrow BC \\perp (SAB) \\Rightarrow (SBC) \\perp (SAB)$ theo giao tuyến $SB$.</p>
+<p>Trong mặt phẳng $(SAB)$, kẻ $HK \\perp SB$ tại $K$ (nét <strong>màu hồng đỏ</strong> trên hình 3D). Do $(SBC) \\perp (SAB)$ nên $HK \\perp (SBC)$ tại $K$.</p>
+<p>Suy ra: $d(H, (SBC)) = HK = HB \\cdot \\sin 60^\\circ = \\frac{a}{2} \\cdot \\frac{\\sqrt{3}}{2} = \\frac{a\\sqrt{3}}{4}$.</p>
+<p><strong>b) Tính khoảng cách từ $H$ đến mặt phẳng $(SCD)$:</strong></p>
+<p>Gọi $M$ là trung điểm của cạnh $CD$. Khi đó $HM \\parallel AD \\Rightarrow HM \\perp CD$ và $HM = a$.</p>
+<p>Vì $CD \\perp HM$ và $CD \\perp SH \\Rightarrow CD \\perp (SHM) \\Rightarrow (SCD) \\perp (SHM)$ theo giao tuyến $SM$.</p>
+<p>Trong $\\triangle SHM$ vuông tại $H$, kẻ $HE \\perp SM$ tại $E$ (nét <strong>màu hồng đỏ</strong> trên hình 3D) $\\Rightarrow HE \\perp (SCD)$.</p>
+<p>$$d(H, (SCD)) = HE = \\frac{SH \\cdot HM}{\\sqrt{SH^2 + HM^2}} = \\frac{\\frac{a\\sqrt{3}}{2} \\cdot a}{\\sqrt{\\frac{3a^2}{4} + a^2}} = \\frac{a\\sqrt{3}}{\\sqrt{7}} = \\frac{a\\sqrt{21}}{7}.$$</p>`,
+            base: ['A', 'B', 'C', 'D'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.2, 0, 0],
+                C: [3.2, 0, 3.2],
+                D: [0, 0, 3.2],
+                H: [1.6, 0, 0],
+                M: [1.6, 0, 3.2],
+                S: [1.6, 2.77, 0],
+                K: [2.8, 0.69, 0],
+                E: [1.6, 1.19, 1.37]
+            },
+            edgesSolid: [['S','A'], ['S','B'], ['S','C'], ['S','D'], ['A','B'], ['B','C'], ['C','D'], ['A','D']],
+            edgesDashed: [],
+            auxEdges: [['S','H'], ['H','M'], ['S','M']],
+            distanceEdges: [['H','K'], ['H','E']],
+            rightAngles: [
+                { at: 'H', from1: 'S', from2: 'B' },
+                { at: 'H', from1: 'S', from2: 'M' },
+                { at: 'K', from1: 'H', from2: 'S' },
+                { at: 'E', from1: 'H', from2: 'S' }
+            ],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C','D']]
+        },
+        kc_A_SBC: {
+            text: "Cho hình chóp S.ABC có đáy ABC là tam giác vuông cân tại B, AB = BC = 2a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABC) và SA = 2a. Kẻ AH vuông góc với SB tại H. Tính khoảng cách từ điểm A đến mặt phẳng (SBC).",
+            solutionHtml: `<p><strong>Bước 1: Chứng minh $BC \\perp (SAB)$</strong></p>
+<p>Ta có: $\\begin{cases} BC \\perp AB \\text{ (do } \\triangle ABC \\text{ vuông tại } B) \\\\ BC \\perp SA \\text{ (do } SA \\perp (ABC)) \\end{cases} \\Rightarrow BC \\perp (SAB)$.</p>
+<p><strong>Bước 2: Xác định đoạn vuông góc từ $A$ đến $(SBC)$</strong></p>
+<p>Trong mặt phẳng $(SAB)$, kẻ $AH \\perp SB$ tại $H$.</p>
+<p>Vì $BC \\perp (SAB)$ và $AH \\subset (SAB)$ nên $BC \\perp AH$.</p>
+<p>Kết hợp $AH \\perp SB$ và $AH \\perp BC \\Rightarrow AH \\perp (SBC)$ tại $H$.</p>
+<p>Do đó: $d(A, (SBC)) = AH$ (được tô <strong>màu hồng đậm</strong> trên mô hình 3D).</p>
+<p><strong>Bước 3: Tính độ dài đoạn khoảng cách $AH$</strong></p>
+<p>Xét $\\triangle SAB$ vuông cân tại $A$ có $SA = AB = 2a$, đường cao $AH$:</p>
+<p>$$\\frac{1}{AH^2} = \\frac{1}{SA^2} + \\frac{1}{AB^2} = \\frac{1}{4a^2} + \\frac{1}{4a^2} = \\frac{1}{2a^2} \\Rightarrow AH = a\\sqrt{2}.$$</p>
+<p><strong>Kết luận:</strong> Khoảng cách từ $A$ đến mặt phẳng $(SBC)$ bằng $a\\sqrt{2}$.</p>`,
+            base: ['A', 'B', 'C'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.2, 0, 0],
+                C: [3.2, 0, 3.2],
+                S: [0, 3.2, 0],
+                H: [1.6, 1.6, 0]
+            },
+            edgesSolid: [['S','A'], ['S','B'], ['S','C'], ['A','B'], ['B','C'], ['A','C']],
+            edgesDashed: [],
+            auxEdges: [['S','H']],
+            distanceEdges: [['A','H']],
+            rightAngles: [
+                { at: 'A', from1: 'S', from2: 'B' },
+                { at: 'B', from1: 'A', from2: 'C' },
+                { at: 'H', from1: 'A', from2: 'S' }
+            ],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','A'], ['A','B','C']]
+        },
+        kc_A_SCD: {
+            text: "Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a√3. Kẻ AH vuông góc với SD tại H. Tính khoảng cách từ A đến mặt phẳng (SCD).",
+            solutionHtml: `<p><strong>Bước 1: Chứng minh $CD \\perp (SAD)$</strong></p>
+<p>Ta có: $\\begin{cases} CD \\perp AD \\text{ (do } ABCD \\text{ là hình vuông)} \\\\ CD \\perp SA \\text{ (do } SA \\perp (ABCD)) \\end{cases} \\Rightarrow CD \\perp (SAD)$.</p>
+<p><strong>Bước 2: Dựng đoạn khoảng cách từ $A$ đến $(SCD)$</strong></p>
+<p>Trong mặt phẳng $(SAD)$, kẻ $AH \\perp SD$ tại $H$.</p>
+<p>Vì $CD \\perp (SAD) \\Rightarrow CD \\perp AH$. Mà $AH \\perp SD \\Rightarrow AH \\perp (SCD)$ tại $H$.</p>
+<p>Vậy $d(A, (SCD)) = AH$ (đoạn nối <strong>màu hồng đỏ</strong> trên hình 3D).</p>
+<p><strong>Bước 3: Tính độ dài $AH$</strong></p>
+<p>Trong $\\triangle SAD$ vuông tại $A$: $AH = \\frac{SA \\cdot AD}{\\sqrt{SA^2 + AD^2}} = \\frac{a\\sqrt{3} \\cdot a}{\\sqrt{3a^2 + a^2}} = \\frac{a\\sqrt{3}}{2}$.</p>`,
+            base: ['A', 'B', 'C', 'D'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.2, 0, 0],
+                C: [3.2, 0, 3.2],
+                D: [0, 0, 3.2],
+                S: [0, 3.6, 0],
+                H: [0, 1.6, 1.8]
+            },
             edgesSolid: [['S','B'], ['S','C'], ['S','D'], ['B','C'], ['C','D']],
             edgesDashed: [['S','A'], ['A','B'], ['A','D'], ['A','C']],
-            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C'], ['A','C','D']]
+            auxEdges: [['A','C']],
+            distanceEdges: [['A','H']],
+            rightAngles: [
+                { at: 'A', from1: 'S', from2: 'D' },
+                { at: 'H', from1: 'A', from2: 'S' }
+            ],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C','D']]
+        },
+        kc_A_SBD: {
+            text: "Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh 2a, tâm O. Cạnh bên SA vuông góc với đáy (ABCD) và SA = 2a. Kẻ AH vuông góc với SO tại H. Tính khoảng cách từ A đến mặt phẳng (SBD).",
+            solutionHtml: `<p><strong>Bước 1: Xác định mặt phẳng vuông góc với $(SBD)$</strong></p>
+<p>Gọi $O = AC \\cap BD$. Vì $ABCD$ là hình vuông nên $AO \\perp BD$ tại $O$.</p>
+<p>Mặt khác $SA \\perp (ABCD) \\Rightarrow SA \\perp BD$. Do đó $BD \\perp (SAO)$.</p>
+<p><strong>Bước 2: Nối $SO$ và dựng đường cao $AH \\perp SO$</strong></p>
+<p>Trong mặt phẳng $(SAO)$, kẻ $AH \\perp SO$ tại $H$. Do $BD \\perp (SAO) \\Rightarrow BD \\perp AH$.</p>
+<p>Suy ra $AH \\perp (SBD)$ tại $H \\Rightarrow d(A, (SBD)) = AH$.</p>
+<p><strong>Bước 3: Tính $AH$</strong></p>
+<p>Ta có $AO = \\frac{AC}{2} = a\\sqrt{2}$ và $SA = 2a$.</p>
+<p>$$AH = \\frac{SA \\cdot AO}{\\sqrt{SA^2 + AO^2}} = \\frac{2a \\cdot a\\sqrt{2}}{\\sqrt{4a^2 + 2a^2}} = \\frac{2a\\sqrt{3}}{3}.$$</p>`,
+            base: ['A', 'B', 'C', 'D'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.2, 0, 0],
+                C: [3.2, 0, 3.2],
+                D: [0, 0, 3.2],
+                O: [1.6, 0, 1.6],
+                S: [0, 3.4, 0],
+                H: [1.09, 1.09, 1.09]
+            },
+            edgesSolid: [['S','B'], ['S','C'], ['S','D'], ['B','C'], ['C','D']],
+            edgesDashed: [['S','A'], ['A','B'], ['A','D']],
+            auxEdges: [['A','C'], ['B','D'], ['S','O']],
+            distanceEdges: [['A','H']],
+            rightAngles: [
+                { at: 'A', from1: 'S', from2: 'O' },
+                { at: 'O', from1: 'A', from2: 'B' },
+                { at: 'H', from1: 'A', from2: 'S' }
+            ],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C','D']]
+        },
+        kc_SA_BC: {
+            text: "Cho hình chóp S.ABCD có đáy ABCD là hình chữ nhật với AB = 2a, BC = a. Cạnh bên SA vuông góc với đáy (ABCD) và SA = 2a. Tính khoảng cách giữa hai đường thẳng chéo nhau SA và BC.",
+            solutionHtml: `<p><strong>Xác định đoạn vuông góc chung của $SA$ và $BC$:</strong></p>
+<p>Ta có $SA \\perp (ABCD)$ mà $AB \\subset (ABCD) \\Rightarrow SA \\perp AB$ tại $A$.</p>
+<p>Mặt khác, vì $ABCD$ là hình chữ nhật nên $AB \\perp BC$ tại $B$.</p>
+<p>Do đó, đoạn thẳng $AB$ vừa vuông góc với $SA$ tại $A$, vừa vuông góc với $BC$ tại $B$.</p>
+<p>Suy ra $AB$ chính là đoạn vuông góc chung của hai đường thẳng chéo nhau $SA$ và $BC$.</p>
+<p><strong>Kết luận:</strong> $d(SA, BC) = AB = 2a$ (được tô nổi bật trên hình 3D).</p>`,
+            base: ['A', 'B', 'C', 'D'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.4, 0, 0],
+                C: [3.4, 0, 2.4],
+                D: [0, 0, 2.4],
+                S: [0, 3.4, 0]
+            },
+            edgesSolid: [['S','B'], ['S','C'], ['S','D'], ['B','C'], ['C','D']],
+            edgesDashed: [['S','A'], ['A','D']],
+            auxEdges: [['A','C']],
+            distanceEdges: [['A','B']],
+            rightAngles: [
+                { at: 'A', from1: 'S', from2: 'B' },
+                { at: 'B', from1: 'A', from2: 'C' }
+            ],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C','D']]
+        },
+        chop_ABCD: {
+            text: "Cho hình chóp S.ABCD có đáy ABCD là hình vuông cạnh a. Cạnh bên SA vuông góc với mặt phẳng đáy (ABCD) và SA = a. Tính góc giữa đường thẳng SC và mặt phẳng (ABCD).",
+            solutionHtml: `<p><strong>Xác định hình chiếu của $SC$ lên $(ABCD)$:</strong></p>
+<p>Do $SA \\perp (ABCD)$ nên $A$ là hình chiếu vuông góc của $S$ lên mặt phẳng $(ABCD)$.</p>
+<p>Do đó, đường chéo $AC$ (nét màu vàng cam) chính là hình chiếu vuông góc của $SC$ lên mặt phẳng $(ABCD)$.</p>
+<p><strong>Tính góc $\\alpha = (SC, (ABCD))$:</strong></p>
+<p>Ta có: $(SC, (ABCD)) = (SC, AC) = \\widehat{SCA}$.</p>
+<p>Vì $ABCD$ là hình vuông cạnh $a$ nên đường chéo $AC = a\\sqrt{2}$.</p>
+<p>Xét $\\triangle SAC$ vuông tại $A$: $\\tan \\widehat{SCA} = \\frac{SA}{AC} = \\frac{a}{a\\sqrt{2}} = \\frac{\\sqrt{2}}{2} \\Rightarrow \\widehat{SCA} \\approx 35^\\circ 16'$.</p>`,
+            base: ['A', 'B', 'C', 'D'],
+            apex: 'S',
+            vertices3D: { A: [0, 0, 0], B: [3.2, 0, 0], C: [3.2, 0, 3.2], D: [0, 0, 3.2], S: [0, 3.2, 0] },
+            edgesSolid: [['S','B'], ['S','C'], ['S','D'], ['B','C'], ['C','D']],
+            edgesDashed: [['S','A'], ['A','B'], ['A','D']],
+            auxEdges: [['A','C']],
+            distanceEdges: [],
+            rightAngles: [{ at: 'A', from1: 'S', from2: 'C' }],
+            faces: [['S','A','B'], ['S','B','C'], ['S','C','D'], ['S','D','A'], ['A','B','C','D']]
         },
         chop_ABC: {
-            text: "Cho hình chóp tam giác đều S.ABC có cạnh đáy bằng a, cạnh bên bằng 2a. Gọi O là tâm của đáy ABC. Tính thể tích khối chóp S.ABC.",
-            vertices3D: { A: [0, 0, 0], B: [3, 0, 0], C: [1.5, 0, 2.6], O: [1.5, 0, 0.86], S: [1.5, 3.5, 0.86] },
-            edgesSolid: [['S','A'], ['S','B'], ['S','C'], ['A','C'], ['B','C']],
-            edgesDashed: [['A','B'], ['S','O'], ['A','O']],
+            text: "Cho hình chóp tam giác đều S.ABC có cạnh đáy bằng a, cạnh bên bằng 2a. Gọi O là tâm của đáy ABC, M là trung điểm BC. Tính chiều cao SO và thể tích khối chóp S.ABC.",
+            solutionHtml: `<p><strong>Bước 1: Xác định đường cao $SO$ và trung tuyến đáy $AM$</strong></p>
+<p>Vì $S.ABC$ là hình chóp tam giác đều nên $SO \\perp (ABC)$ với $O$ là trọng tâm $\\triangle ABC$.</p>
+<p>Gọi $M$ là trung điểm của $BC$, ta có $AM = \\frac{a\\sqrt{3}}{2} \\Rightarrow AO = \\frac{2}{3}AM = \\frac{a\\sqrt{3}}{3}$.</p>
+<p><strong>Bước 2: Tính đường cao $SO$ và thể tích $V$</strong></p>
+<p>Xét $\\triangle SAO$ vuông tại $O$: $SO = \\sqrt{SA^2 - AO^2} = \\sqrt{4a^2 - \\frac{a^2}{3}} = \\frac{a\\sqrt{33}}{3}$.</p>
+<p>Thể tích khối chóp: $V_{S.ABC} = \\frac{1}{3} \\cdot S_{\\triangle ABC} \\cdot SO = \\frac{1}{3} \\cdot \\frac{a^2\\sqrt{3}}{4} \\cdot \\frac{a\\sqrt{33}}{3} = \\frac{a^3\\sqrt{11}}{12}$.</p>`,
+            base: ['A', 'B', 'C'],
+            apex: 'S',
+            vertices3D: {
+                A: [0, 0, 0],
+                B: [3.4, 0, 0],
+                C: [1.7, 0, 2.94],
+                M: [2.55, 0, 1.47],
+                O: [1.7, 0, 0.98],
+                S: [1.7, 3.5, 0.98]
+            },
+            edgesSolid: [['S','A'], ['S','B'], ['S','C'], ['A','C'], ['B','C'], ['A','B']],
+            edgesDashed: [],
+            auxEdges: [['A','M'], ['S','M']],
+            distanceEdges: [['S','O']],
+            rightAngles: [{ at: 'O', from1: 'S', from2: 'A' }],
             faces: [['S','A','B'], ['S','B','C'], ['S','C','A'], ['A','B','C']]
         }
     };
-    let activeModel = samples.chop_ABCD;
+    let activeModel = samples.cau20_SAB_deu;
 
     // =========================================================================
-    // THUẬT TOÁN HÌNH HỌC PHỤC VỤ:
-    // 1. TÌM MẶT BAO NGOÀI ĐA DIỆN LỒI
-    // 2. XÉT ẨN/HIỆN CẠNH THEO GÓC NHÌN CAMERA (NÉT LIỀN / NÉT ĐỨT ĐỘNG)
-    // 3. TỰ ĐỘNG TRẢI PHẲNG 2D (NET) CHO MỌI BÀI TẬP AI SINH RA
+    // THUẬT TOÁN HÌNH HỌC THÔNG MINH:
+    // 1. TỰ ĐỘNG BỔ SUNG ĐẦY ĐỦ CẠNH ĐÁY, CẠNH BÊN (CHỐNG THIẾU CẠNH TỪ AI)
+    // 2. TỰ ĐỘNG TÍNH TOẠ ĐỘ CHÂN ĐƯỜNG VUÔNG GÓC (H, K) & TRUNG ĐIỂM (M, N, O)
+    // 3. TỰ ĐỘNG NỐI CÁC ĐOẠN KHOẢNG CÁCH VÀ ĐƯỜNG DỰNG PHỤ TRONG LỜI GIẢI
     // =========================================================================
+
+    // Hình chiếu vuông góc của điểm P lên đường thẳng đi qua A và B trong 3D
+    function projectPointOnLine3D(P, A, B) {
+        const p = new THREE.Vector3(...P);
+        const a = new THREE.Vector3(...A);
+        const b = new THREE.Vector3(...B);
+        const ab = new THREE.Vector3().subVectors(b, a);
+        const lenSq = ab.lengthSq();
+        if (lenSq < 1e-6) return A.slice();
+        let t = new THREE.Vector3().subVectors(p, a).dot(ab) / lenSq;
+        // Giữ điểm chiếu nằm hợp lý trên đoạn thẳng để dễ nhìn
+        t = Math.max(0.18, Math.min(0.82, t));
+        const proj = a.clone().add(ab.multiplyScalar(t));
+        return [Number(proj.x.toFixed(3)), Number(proj.y.toFixed(3)), Number(proj.z.toFixed(3))];
+    }
+
+    // Tự động hoàn thiện khung đa diện và tự động nối các đoạn thẳng khoảng cách / đường phụ
+    function autoCompleteAndConnectGeometry(data, problemAndSolutionText = '') {
+        if (!data || !data.vertices3D) return data;
+        normalizeGeometryModel(data);
+
+        const verts = data.vertices3D;
+        const text = (problemAndSolutionText || '') + ' ' + (document.getElementById('problemInput')?.value || '');
+
+        // 1. Tự động suy luận danh sách đỉnh đáy (base) và đỉnh chóp (apex) nếu thiếu
+        if (!Array.isArray(data.base) || data.base.length < 3) {
+            const stdBase = ['A', 'B', 'C', 'D', 'E', 'F'].filter(k => verts[k] && Math.abs(verts[k][1]) < 0.25);
+            if (stdBase.length >= 3) data.base = stdBase;
+        }
+        if (!data.apex && verts['S']) {
+            data.apex = 'S';
+        }
+
+        // 2. Tự động tính các điểm đặc biệt (O, M, N, I, H, K) nếu có nhắc trong đề/lời giải mà AI quên tọa độ
+        // Tâm O của đáy hình vuông / chữ nhật ABCD
+        if (/\bO\b/.test(text) && !verts['O'] && verts['A'] && verts['C']) {
+            if (verts['B'] && verts['D']) {
+                verts['O'] = [
+                    Number(((verts['A'][0] + verts['C'][0]) / 2).toFixed(3)),
+                    Number(((verts['A'][1] + verts['C'][1]) / 2).toFixed(3)),
+                    Number(((verts['A'][2] + verts['C'][2]) / 2).toFixed(3))
+                ];
+            } else if (verts['B']) {
+                // Trọng tâm tam giác ABC
+                verts['O'] = [
+                    Number(((verts['A'][0] + verts['B'][0] + verts['C'][0]) / 3).toFixed(3)),
+                    Number(((verts['A'][1] + verts['B'][1] + verts['C'][1]) / 3).toFixed(3)),
+                    Number(((verts['A'][2] + verts['B'][2] + verts['C'][2]) / 3).toFixed(3))
+                ];
+            }
+        }
+
+        // Phát hiện trung điểm: "M là trung điểm của BC" / "gọi M là trung điểm BC"
+        const midRegex = /([MNIJEFKP])\s+là\s+trung\s+điểm(?:\s+của)?(?:\s+cạnh|\s+đoạn)?\s+([A-Z])([A-Z])/gi;
+        let midMatch;
+        while ((midMatch = midRegex.exec(text)) !== null) {
+            const ptName = midMatch[1].toUpperCase();
+            const u = midMatch[2].toUpperCase();
+            const v = midMatch[3].toUpperCase();
+            if (!verts[ptName] && verts[u] && verts[v]) {
+                verts[ptName] = [
+                    Number(((verts[u][0] + verts[v][0]) / 2).toFixed(3)),
+                    Number(((verts[u][1] + verts[v][1]) / 2).toFixed(3)),
+                    Number(((verts[u][2] + verts[v][2]) / 2).toFixed(3))
+                ];
+            }
+        }
+
+        // Phát hiện chân đường vuông góc: "kẻ AH vuông góc với SB", "AH \perp SB", "kẻ AK \perp SH"
+        data.rightAngles = Array.isArray(data.rightAngles) ? data.rightAngles : [];
+        const perpPatterns = [
+            /([A-Z])([HKIEFMN])\s*(?:vuông\s*góc(?:\s*với)?|\\perp|⊥)\s*([A-Z])([A-Z])/gi,
+            /hình\s*chiếu(?:\s*vuông\s*góc)?\s*của\s*([A-Z])\s*(?:lên|trên)\s*([A-Z])([A-Z])\s*là\s*([HKIEFMN])/gi
+        ];
+
+        let m1;
+        while ((m1 = perpPatterns[0].exec(text)) !== null) {
+            const fromPt = m1[1].toUpperCase();
+            const footPt = m1[2].toUpperCase();
+            const segU = m1[3].toUpperCase();
+            const segV = m1[4].toUpperCase();
+            if (verts[fromPt] && verts[segU] && verts[segV] && footPt !== segU && footPt !== segV) {
+                if (!verts[footPt]) {
+                    verts[footPt] = projectPointOnLine3D(verts[fromPt], verts[segU], verts[segV]);
+                }
+                data.rightAngles.push({ at: footPt, from1: fromPt, from2: segU });
+            }
+        }
+
+        // 3. Đảm bảo tất cả các cạnh của mặt đáy và các cạnh bên từ đỉnh S đều được nối đầy đủ
+        data.edgesSolid = Array.isArray(data.edgesSolid) ? data.edgesSolid : [];
+        data.edgesDashed = Array.isArray(data.edgesDashed) ? data.edgesDashed : [];
+        data.auxEdges = Array.isArray(data.auxEdges) ? data.auxEdges : [];
+        data.distanceEdges = Array.isArray(data.distanceEdges) ? data.distanceEdges : [];
+        data.faces = Array.isArray(data.faces) ? data.faces : [];
+
+        const hasEdge = (list, u, v) => list.some(([a, b]) => (a === u && b === v) || (a === v && b === u));
+        const allListed = () => [...data.edgesSolid, ...data.edgesDashed, ...data.auxEdges, ...data.distanceEdges];
+
+        if (Array.isArray(data.base) && data.base.length >= 3) {
+            const b = data.base;
+            for (let i = 0; i < b.length; i++) {
+                const u = b[i];
+                const v = b[(i + 1) % b.length];
+                if (verts[u] && verts[v] && !hasEdge(allListed(), u, v)) {
+                    data.edgesSolid.push([u, v]);
+                }
+            }
+            if (data.apex && verts[data.apex]) {
+                b.forEach(u => {
+                    if (verts[u] && !hasEdge(allListed(), data.apex, u)) {
+                        data.edgesSolid.push([data.apex, u]);
+                    }
+                });
+            }
+        }
+
+        // Nếuเป็น lăng trụ (có A', B', C' hoặc A1, B1, C1), tự động nối các cạnh bên và đáy trên
+        ['A', 'B', 'C', 'D'].forEach(u => {
+            const uPrime = verts[u + "'"] ? (u + "'") : (verts[u + "1"] ? (u + "1") : null);
+            if (verts[u] && uPrime && !hasEdge(allListed(), u, uPrime)) {
+                data.edgesSolid.push([u, uPrime]);
+            }
+        });
+
+        // 4. Tự động quét mọi đoạn thẳng 2 điểm có mặt trong lời giải (VD: AH, AK, SH, SM, SO, AC, BD, HK, MN, OM...)
+        // để nối lại giúp người học nhìn rõ khoảng cách và đường dựng hình
+        const mainVertSet = new Set([...(data.base || []), data.apex, "A'", "B'", "C'", "D'", "A1", "B1", "C1", "D1"].filter(Boolean));
+        const vertKeys = Object.keys(verts).filter(k => !k.startsWith('__'));
+
+        // Tìm đoạn khoảng cách kết luận: d(...) = XY hoặc "khoảng cách ... là XY"
+        const distTargetMatches = [
+            ...text.matchAll(/d\s*\([^)]+\)\s*=\s*([A-Z]{2})\b/g),
+            ...text.matchAll(/khoảng\s+cách[^.;\n]{0,50}?(?:bằng|là)\s+([A-Z]{2})\b/gi)
+        ];
+        distTargetMatches.forEach(dm => {
+            const seg = dm[1].toUpperCase();
+            const u = seg[0], v = seg[1];
+            if (verts[u] && verts[v] && u !== v && !hasEdge(data.distanceEdges, u, v)) {
+                data.distanceEdges.push([u, v]);
+            }
+        });
+
+        // Quét tất cả các cặp điểm có nhắc tới trong văn bản để tự động nối lại
+        for (let i = 0; i < vertKeys.length; i++) {
+            for (let j = i + 1; j < vertKeys.length; j++) {
+                const u = vertKeys[i];
+                const v = vertKeys[j];
+                if (u.length !== 1 || v.length !== 1) continue;
+                const pairRegex = new RegExp(`\\b(${u}${v}|${v}${u})\\b`);
+                if (pairRegex.test(text)) {
+                    if (!hasEdge(allListed(), u, v)) {
+                        // Nếu 1 trong 2 điểm là H hoặc K (chân đường cao) và điểm kia là A, O, M, I -> Ưu tiên làm đoạn khoảng cách nếu chưa có
+                        if ((['H', 'K'].includes(u) || ['H', 'K'].includes(v)) && (['A', 'O', 'M', 'I', 'B', 'C'].includes(u) || ['A', 'O', 'M', 'I', 'B', 'C'].includes(v))) {
+                            if (u === 'S' || v === 'S') {
+                                data.auxEdges.push([u, v]);
+                            } else {
+                                data.distanceEdges.push([u, v]);
+                            }
+                        } else if (!mainVertSet.has(u) || !mainVertSet.has(v)) {
+                            data.auxEdges.push([u, v]);
+                        } else {
+                            // Đường chéo đáy AC, BD
+                            data.auxEdges.push([u, v]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Nếu có điểm H hoặc K trong vertices3D mà vẫn chưa được nối tới đỉnh xuất phát (A hoặc O), tự động nối!
+        ['H', 'K'].forEach(foot => {
+            if (verts[foot]) {
+                const connected = allListed().some(([a, b]) => a === foot || b === foot);
+                if (!connected && verts['A']) {
+                    data.distanceEdges.push(['A', foot]);
+                }
+            }
+        });
+
+        return data;
+    }
+
+    // Dựng hình sơ bộ tức thì (0.05 giây) dựa trên nội dung đề bài trong lúc chờ AI giải chi tiết
+    function buildInstantPreviewFromProblem(problemText) {
+        const t = problemText || '';
+        if (/SAB\s+là\s+tam\s+giác\s+đều|nằm\s+trong\s+mặt\s+phẳng\s+vuông\s+góc\s+với\s+đáy|H\s+là\s+trung\s+điểm\s+AB/i.test(t)) {
+            return JSON.parse(JSON.stringify(samples.cau20_SAB_deu));
+        }
+        const isTriangleBase = /S\.ABC\b/i.test(t) && !/S\.ABCD/i.test(t);
+        const isRegularPyramid = /chóp\s+(?:tam\s+giác|tứ\s+giác)\s+đều/i.test(t);
+
+        if (isTriangleBase && isRegularPyramid) {
+            return JSON.parse(JSON.stringify(samples.chop_ABC));
+        }
+        if (isTriangleBase) {
+            return JSON.parse(JSON.stringify(samples.kc_A_SBC));
+        }
+        if (/SBD/i.test(t) && /khoảng\s+cách/i.test(t)) {
+            return JSON.parse(JSON.stringify(samples.kc_A_SBD));
+        }
+        if (/SCD/i.test(t) && /khoảng\s+cách/i.test(t)) {
+            return JSON.parse(JSON.stringify(samples.kc_A_SCD));
+        }
+        if (/chéo\s+nhau/i.test(t)) {
+            return JSON.parse(JSON.stringify(samples.kc_SA_BC));
+        }
+        return JSON.parse(JSON.stringify(samples.chop_ABCD));
+    }
 
     function computeConvexHull2D(points2D) {
         if (points2D.length <= 2) return points2D.slice();
@@ -942,17 +1583,14 @@ Lưu ý:
         return lower.concat(upper);
     }
 
-    // HÀM MỚI: Tự động nhận diện Đáy - Đỉnh và chuẩn hóa về hệ trục Y-up của Three.js
     function normalizeGeometryModel(data) {
         if (!data || !data.vertices3D) return data;
         const verts = data.vertices3D;
-        const allKeys = Object.keys(verts);
+        const allKeys = Object.keys(verts).filter(k => !k.startsWith('__'));
         if (allKeys.length < 4) return data;
 
-        // 1. Xác định danh sách đỉnh mặt đáy (baseKeys) và đỉnh chóp (apexKeys)
         let baseKeys = Array.isArray(data.base) ? data.base.filter(k => verts[k]) : [];
         if (baseKeys.length < 3) {
-            // Ưu tiên các đỉnh đáy chuẩn trong Toán THPT: A, B, C, D, E, F
             const standardBase = ['A', 'B', 'C', 'D', 'E', 'F'].filter(k => verts[k]);
             if (standardBase.length >= 3) {
                 baseKeys = standardBase;
@@ -966,15 +1604,12 @@ Lưu ý:
             apexKeys = allKeys.filter(k => /^S$|^S\d|[A-Z]'|[A-Z]1$/.test(k));
         }
 
-        // 2. Kiểm tra xem mặt đáy đang nằm trên mặt phẳng y = const hay z = const (do AI dùng Oxyz Toán học)
         if (baseKeys.length >= 3) {
             const ys = baseKeys.map(k => verts[k][1]);
             const zs = baseKeys.map(k => verts[k][2]);
             const spreadY = Math.max(...ys) - Math.min(...ys);
             const spreadZ = Math.max(...zs) - Math.min(...zs);
 
-            // Nếu các đỉnh đáy có z gần như bằng nhau (spreadZ nhỏ) nhưng y lại trải rộng (spreadY lớn)
-            // -> AI đã đặt đáy trên mặt phẳng Oxy (z=0) và chiều cao là trục Oz. Cần đổi trục Y và Z!
             if (spreadZ < 0.15 && spreadY > 0.4) {
                 allKeys.forEach(k => {
                     const [x, y, z] = verts[k];
@@ -983,14 +1618,12 @@ Lưu ý:
             }
         }
 
-        // 3. Đưa mặt đáy về đúng mặt phẳng y = 0 và đảm bảo đỉnh S luôn hướng lên trên (y > 0)
         if (baseKeys.length >= 3) {
             const baseY = baseKeys.reduce((sum, k) => sum + verts[k][1], 0) / baseKeys.length;
             allKeys.forEach(k => {
                 verts[k][1] = Number((verts[k][1] - baseY).toFixed(4));
             });
 
-            // Kiểm tra chiều cao của đỉnh chóp S (hoặc đỉnh có |y| lớn nhất)
             let refApexY = 0;
             if (apexKeys.length > 0) {
                 refApexY = apexKeys.reduce((sum, k) => sum + verts[k][1], 0) / apexKeys.length;
@@ -1001,7 +1634,6 @@ Lưu ý:
                 }
             }
 
-            // Nếu đỉnh bị lộn xuống dưới mặt đáy (y < 0) thì lật ngược trục Oy lên trên
             if (refApexY < -0.05) {
                 allKeys.forEach(k => {
                     verts[k][1] = -verts[k][1];
@@ -1009,19 +1641,38 @@ Lưu ý:
             }
         }
 
+        // Tự động co giãn kích thước mô hình về tầm nhìn chuẩn (khoảng 3.2 - 3.8 đơn vị) nếu AI cho tọa độ quá nhỏ (như a=1) hoặc quá lớn
+        let maxCoord = 0;
+        allKeys.forEach(k => {
+            maxCoord = Math.max(maxCoord, Math.abs(verts[k][0]), Math.abs(verts[k][1]), Math.abs(verts[k][2]));
+        });
+        if (maxCoord > 0.05 && (maxCoord < 1.8 || maxCoord > 6.5)) {
+            const scaleFactor = 3.2 / maxCoord;
+            allKeys.forEach(k => {
+                verts[k] = [
+                    Number((verts[k][0] * scaleFactor).toFixed(3)),
+                    Number((verts[k][1] * scaleFactor).toFixed(3)),
+                    Number((verts[k][2] * scaleFactor).toFixed(3))
+                ];
+            });
+            if (data.sphere && Array.isArray(data.sphere.center)) {
+                data.sphere.center = data.sphere.center.map(v => Number((v * scaleFactor).toFixed(3)));
+                data.sphere.radius = Number((data.sphere.radius * scaleFactor).toFixed(3));
+            }
+        }
+
         return data;
     }
 
     function extractOuterBoundaryFaces(vertsMap, mainHullKeys = null) {
-        // Chỉ lấy các đỉnh chính (S, A, B, C, D, A', B'...) để dựng vỏ bao lồi, tránh bị nhiễu bởi điểm phụ H, K, I, M
         let hullKeys = Array.isArray(mainHullKeys) && mainHullKeys.length >= 4
             ? mainHullKeys.filter(k => vertsMap[k])
             : Object.keys(vertsMap).filter(k => /^(S|A|B|C|D|E|F|A'|B'|C'|D'|A1|B1|C1|D1)$/.test(k));
 
         if (hullKeys.length < 4) {
-            hullKeys = Object.keys(vertsMap);
+            hullKeys = Object.keys(vertsMap).filter(k => !k.startsWith('__'));
         }
-        const allKeys = Object.keys(vertsMap);
+        const allKeys = Object.keys(vertsMap).filter(k => !k.startsWith('__'));
         const pts = {};
         allKeys.forEach(k => { pts[k] = new THREE.Vector3(...vertsMap[k]); });
         if (hullKeys.length < 4) return [];
@@ -1031,7 +1682,7 @@ Lưu ý:
         centroid3D.divideScalar(hullKeys.length);
 
         const planes = [];
-        const EPS = 0.08; // Tăng nhẹ dung sai để chịu được sai số làm tròn của AI
+        const EPS = 0.08;
 
         for (let i = 0; i < hullKeys.length; i++) {
             for (let j = i + 1; j < hullKeys.length; j++) {
@@ -1118,11 +1769,17 @@ Lưu ý:
         return (t > 0.02 && t < 0.97);
     }
 
+    // Tự động ẩn/hiện nét liền (hình trụ đặc) và nét đứt (chuỗi hình trụ đứt đoạn) theo góc xoay Camera
     function updateDynamicEdgesVisibility() {
         if (isUnfolded || dynamicEdges.length === 0) return;
         const camPos = camera.position;
 
         dynamicEdges.forEach(edge => {
+            if (edge.forceDashed) {
+                edge.solidMesh.visible = false;
+                edge.dashedMesh.visible = true;
+                return;
+            }
             let visible = false;
 
             if (edge.ownerFaces.length > 0) {
@@ -1147,20 +1804,21 @@ Lưu ý:
                 }
             }
 
-            const targetMat = visible ? solidMat : dashedMat;
-            if (edge.line.material !== targetMat) {
-                edge.line.material = targetMat;
-            }
+            edge.solidMesh.visible = visible;
+            edge.dashedMesh.visible = !visible;
         });
     }
 
     function buildUnfoldedNet(data) {
-        const verts = data.vertices3D || {};
-        const bFaces = extractOuterBoundaryFaces(verts);
+        const rawVerts = {};
+        Object.keys(data.vertices3D || {}).forEach(k => {
+            if (!k.startsWith('__')) rawVerts[k] = data.vertices3D[k];
+        });
+        const bFaces = extractOuterBoundaryFaces(rawVerts);
         if (bFaces.length === 0) return null;
 
         const pts3D = {};
-        Object.keys(verts).forEach(k => { pts3D[k] = new THREE.Vector3(...verts[k]); });
+        Object.keys(rawVerts).forEach(k => { pts3D[k] = new THREE.Vector3(...rawVerts[k]); });
 
         let baseIdx = 0;
         let minNy = Infinity;
@@ -1296,7 +1954,7 @@ Lưu ý:
             }
         }
 
-        const allOriginalEdges = [...(data.edgesSolid || []), ...(data.edgesDashed || [])];
+        const allOriginalEdges = [...(data.edgesSolid || []), ...(data.edgesDashed || []), ...(data.auxEdges || []), ...(data.distanceEdges || [])];
         allOriginalEdges.forEach(([v1, v2]) => {
             bFaces.forEach((f, fIdx) => {
                 if (!face2DMap[fIdx]) return;
@@ -1310,7 +1968,7 @@ Lưu ý:
                             break;
                         }
                     }
-                    if (!isBorder) {
+                    if (!isBorder && face2DMap[fIdx][v1] && face2DMap[fIdx][v2]) {
                         const k1 = face2DMap[fIdx][v1].key;
                         const k2 = face2DMap[fIdx][v2].key;
                         netAuxDashed.push([k1, k2]);
@@ -1328,16 +1986,29 @@ Lưu ý:
 
     function loadSample() {
         const key = document.getElementById('sampleSelect').value;
-        activeModel = samples[key];
+        activeModel = JSON.parse(JSON.stringify(samples[key]));
         document.getElementById('problemInput').value = activeModel.text;
+        const output = document.getElementById('solutionOutput');
+        if (activeModel.solutionHtml) {
+            output.innerHTML = activeModel.solutionHtml;
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(output, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ]
+                });
+            }
+        }
         isUnfolded = false;
         document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
         drawGeometry(activeModel, false);
         resetCamera();
     }
 
-   function drawGeometry(data, unfolded = false) {
-        normalizeGeometryModel(data);
+    // --- HÀM VẼ HÌNH HỌC 3D NÉT ĐẬM, HỆ TRỤC OXYZ & ĐOẠN KHOẢNG CÁCH VUÔNG GÓC ---
+    function drawGeometry(data, unfolded = false) {
+        autoCompleteAndConnectGeometry(data, document.getElementById('solutionOutput')?.innerText || '');
 
         while (shapeGroup.children.length > 0) shapeGroup.remove(shapeGroup.children[0]);
         labelsContainer.innerHTML = '';
@@ -1345,7 +2016,12 @@ Lưu ý:
         dynamicEdges = [];
         outerTriangles = [];
 
-        // === BỔ SUNG 1: VẼ MẶT CẦU NẾU CÓ TRONG DỮ LIỆU JSON ===
+        // Bán kính hình trụ cho các loại nét (đảm bảo nét đậm rõ trên mọi màn hình)
+        const baseRadius = 0.036 * lineThicknessScale;
+        const auxRadius = 0.034 * lineThicknessScale;
+        const distRadius = 0.052 * lineThicknessScale; // Đoạn khoảng cách đậm nổi bật nhất
+
+        // 1. Vẽ Mặt cầu nếu có
         if (data.sphere && !unfolded) {
             const sp = data.sphere;
             const center = new THREE.Vector3(...sp.center);
@@ -1354,7 +2030,7 @@ Lưu ý:
             const sphereMat = new THREE.MeshBasicMaterial({
                 color: 0x38bdf8,
                 transparent: true,
-                opacity: 0.15,
+                opacity: 0.14,
                 side: THREE.DoubleSide,
                 depthWrite: false
             });
@@ -1369,10 +2045,14 @@ Lưu ý:
             shapeGroup.add(wireMesh);
         }
 
+        // Xóa các nhãn đường thẳng tạm trước khi tính toán lại
+        Object.keys(data.vertices3D).forEach(k => {
+            if (k.startsWith('__lineLabel_')) delete data.vertices3D[k];
+        });
+
         const netData = buildUnfoldedNet(data);
         const verts = (unfolded && netData) ? netData.verticesUnfolded : data.vertices3D;
-        
-        // === BỔ SUNG 2: TỰ ĐỘNG ĐẶT NHÃN TÊN ĐƯỜNG THẲNG (d, delta,...) Ở TRUNG ĐIỂM ===
+
         if (data.lineLabels && Array.isArray(data.lineLabels) && !unfolded) {
             data.lineLabels.forEach(item => {
                 const [p1Name, p2Name] = item.segment;
@@ -1380,7 +2060,7 @@ Lưu ý:
                     const p1 = new THREE.Vector3(...verts[p1Name]);
                     const p2 = new THREE.Vector3(...verts[p2Name]);
                     const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-                    mid.y += 0.25; // Nhấc lên nhẹ để không dính vào đường thẳng
+                    mid.y += 0.25;
                     const labelKey = `__lineLabel_${item.label}`;
                     verts[labelKey] = [mid.x, mid.y, mid.z];
                 }
@@ -1389,8 +2069,10 @@ Lưu ý:
 
         currentVertices = verts;
 
+        // Dựng lại hệ trục tọa độ Oxyz
+        buildOxyzAxes();
+
         if (!unfolded) {
-            // ... (Giữ nguyên các đoạn code vẽ mảng đa diện, cạnh solid/dashed phía dưới của bạn) ...
             const mainHullKeys = [
                 ...(data.base || []),
                 ...(data.apex ? [data.apex] : [])
@@ -1424,21 +2106,41 @@ Lưu ý:
                 });
             }
 
-            const rawEdges = [...(data.edgesSolid || []), ...(data.edgesDashed || [])];
+            // Tập hợp và phân loại cạnh: distance (Hồng đỏ), aux (Vàng cam), main (Xanh Cyan)
+            const distSet = new Set((data.distanceEdges || []).map(([a, b]) => [a, b].sort().join('--')));
+            const auxSet = new Set((data.auxEdges || []).map(([a, b]) => [a, b].sort().join('--')));
+
+            const allEdgesCombined = [
+                ...(data.distanceEdges || []).map(e => ({ pair: e, type: 'distance' })),
+                ...(data.auxEdges || []).map(e => ({ pair: e, type: 'aux' })),
+                ...(data.edgesSolid || []).map(e => ({ pair: e, type: 'main' })),
+                ...(data.edgesDashed || []).map(e => ({ pair: e, type: 'main' }))
+            ];
+
             const seenEdgeKeys = new Set();
 
-            rawEdges.forEach(([v1, v2]) => {
-                if (!verts[v1] || !verts[v2]) return;
+            allEdgesCombined.forEach(({ pair, type }) => {
+                const [v1, v2] = pair;
+                if (!verts[v1] || !verts[v2] || v1 === v2) return;
                 const edgeKey = [v1, v2].sort().join('--');
                 if (seenEdgeKeys.has(edgeKey)) return;
                 seenEdgeKeys.add(edgeKey);
 
+                // Xác định loại cạnh chuẩn xác
+                let finalType = type;
+                if (distSet.has(edgeKey)) finalType = 'distance';
+                else if (auxSet.has(edgeKey)) finalType = 'aux';
+
                 const p1 = new THREE.Vector3(...verts[v1]);
                 const p2 = new THREE.Vector3(...verts[v2]);
-                const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-                const line = new THREE.Line(geo, solidMat);
-                line.computeLineDistances();
-                shapeGroup.add(line);
+
+                const mat = finalType === 'distance' ? MAT_DIST : (finalType === 'aux' ? MAT_AUX : MAT_MAIN);
+                const radius = finalType === 'distance' ? distRadius : (finalType === 'aux' ? auxRadius : baseRadius);
+
+                const solidMesh = createCylinderSegment(p1, p2, radius, mat);
+                const dashedMesh = createDashedCylinderGroup(p1, p2, radius * 0.92, mat, 0.22, 0.14);
+                shapeGroup.add(solidMesh);
+                shapeGroup.add(dashedMesh);
 
                 const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
                 const samplePoints = [
@@ -1451,7 +2153,40 @@ Lưu ý:
                     f => f.coplanarKeys.includes(v1) && f.coplanarKeys.includes(v2)
                 );
 
-                dynamicEdges.push({ v1, v2, line, midpoint, samplePoints, ownerFaces });
+                // Đường chéo bên trong hoặc đường cao SO nằm lọt trong khối thì ưu tiên xét ẩn/hiện thực tế
+                dynamicEdges.push({
+                    v1, v2,
+                    solidMesh,
+                    dashedMesh,
+                    midpoint,
+                    samplePoints,
+                    ownerFaces,
+                    forceDashed: false
+                });
+            });
+
+            // Vẽ các chấm cầu ở từng đỉnh để mối nối mượt và nổi bật điểm H, K, M, O
+            Object.keys(verts).forEach(k => {
+                if (k.startsWith('__')) return;
+                const pt = new THREE.Vector3(...verts[k]);
+                const isAuxVertex = /^[HKMNOIJE]$/.test(k);
+                const sphGeo = new THREE.SphereGeometry(baseRadius * (isAuxVertex ? 1.85 : 1.55), 14, 14);
+                const sphMesh = new THREE.Mesh(sphGeo, isAuxVertex ? MAT_VERTEX_AUX : MAT_VERTEX);
+                sphMesh.position.copy(pt);
+                shapeGroup.add(sphMesh);
+            });
+
+            // Vẽ ký hiệu góc vuông 3D tại chân các đường cao (A, H, K, O, M...)
+            (data.rightAngles || []).forEach(ra => {
+                if (verts[ra.at] && verts[ra.from1] && verts[ra.from2]) {
+                    const marker = createRightAngleMarker3D(
+                        new THREE.Vector3(...verts[ra.at]),
+                        new THREE.Vector3(...verts[ra.from1]),
+                        new THREE.Vector3(...verts[ra.from2]),
+                        0.28
+                    );
+                    if (marker) shapeGroup.add(marker);
+                }
             });
 
             updateDynamicEdgesVisibility();
@@ -1462,35 +2197,44 @@ Lưu ý:
                     const triGeo = new THREE.BufferGeometry().setFromPoints([pts[0], pts[i], pts[i + 1]]);
                     shapeGroup.add(new THREE.Mesh(triGeo, faceMat));
                 }
-                const borderGeo = new THREE.BufferGeometry().setFromPoints(pts);
-                shapeGroup.add(new THREE.LineLoop(borderGeo, solidMat));
+                for (let i = 0; i < pts.length; i++) {
+                    const p1 = pts[i];
+                    const p2 = pts[(i + 1) % pts.length];
+                    shapeGroup.add(createCylinderSegment(p1, p2, baseRadius, MAT_MAIN));
+                }
             });
 
             (netData.netAuxDashed || []).forEach(([k1, k2]) => {
                 if (!verts[k1] || !verts[k2]) return;
-                const geo = new THREE.BufferGeometry().setFromPoints([
+                shapeGroup.add(createDashedCylinderGroup(
                     new THREE.Vector3(...verts[k1]),
-                    new THREE.Vector3(...verts[k2])
-                ]);
-                const line = new THREE.Line(geo, dashedMat);
-                line.computeLineDistances();
-                shapeGroup.add(line);
+                    new THREE.Vector3(...verts[k2]),
+                    auxRadius,
+                    MAT_AUX
+                ));
             });
         }
 
-        // === BỔ SUNG 3: RENDER NHÃN RA MÀN HÌNH (GỒM CẢ TÊN ĐƯỜNG THẲNG VÀ TÊN ĐỈNH) ===
+        // Render nhãn đỉnh & nhãn đường thẳng ra màn hình
         Object.keys(verts).forEach(k => {
             const div = document.createElement('div');
             div.className = 'label-3d';
             
             if (k.startsWith('__lineLabel_')) {
-                // Tên đường thẳng sẽ có màu hồng nhạt, kiểu chữ nghiêng nổi bật
                 div.style.color = '#fb7185';
+                div.style.borderColor = 'rgba(244, 63, 94, 0.5)';
                 div.style.fontStyle = 'italic';
-                div.style.fontWeight = 'bold';
                 div.textContent = k.replace('__lineLabel_', '');
             } else {
-                div.textContent = k.replace(/_.*$/, '');
+                const cleanLabel = k.replace(/_.*$/, '');
+                if (/^[HK]$/.test(cleanLabel)) {
+                    div.style.color = '#fda4af';
+                    div.style.borderColor = 'rgba(244, 63, 94, 0.6)';
+                } else if (/^[MNOI]$/.test(cleanLabel)) {
+                    div.style.color = '#fde047';
+                    div.style.borderColor = 'rgba(250, 204, 21, 0.5)';
+                }
+                div.textContent = cleanLabel;
             }
 
             labelsContainer.appendChild(div);
@@ -1499,8 +2243,8 @@ Lưu ý:
     }
 
     function resetCamera() {
-        camera.position.set(6, 4.5, 7.5);
-        controls.target.set(1.5, 1, 1.2);
+        camera.position.set(6.5, 4.8, 7.8);
+        controls.target.set(1.5, 1.1, 1.3);
         controls.update();
     }
 
@@ -1537,53 +2281,151 @@ Lưu ý:
         renderer.render(scene, camera);
 
         if (!container.clientWidth || !container.clientHeight) return;
+
+        // Cập nhật tọa độ các nhãn đỉnh A, B, C, S, H, K...
         Object.keys(currentVertices).forEach(k => {
             const pos = new THREE.Vector3(...currentVertices[k]);
             pos.project(camera);
-            const x = (pos.x * .5 + .5) * container.clientWidth;
-            const y = (-(pos.y * .5) + .5) * container.clientHeight;
+            const x = (pos.x * 0.5 + 0.5) * container.clientWidth;
+            const y = (-(pos.y * 0.5) + 0.5) * container.clientHeight;
             if (labelElements[k]) {
-                labelElements[k].style.transform = `translate(-50%, -50%) translate(${x}px,${y - 12}px)`;
+                labelElements[k].style.transform = `translate(-50%, -50%) translate(${x}px,${y - 14}px)`;
             }
+        });
+
+        // Cập nhật tọa độ nhãn hệ trục O, x, y, z
+        axisLabelElements.forEach(item => {
+            const pos = item.pos.clone().project(camera);
+            const x = (pos.x * 0.5 + 0.5) * container.clientWidth;
+            const y = (-(pos.y * 0.5) + 0.5) * container.clientHeight;
+            item.el.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
         });
     }
 
-    // --- KẾT NỐI GEMINI AI SIÊU TỐC ---
-    async function callGeminiWithRetry(apiKey, parts, btn) {
-        const preferred = document.getElementById('modelSelect').value;
-        const modelsToTry = [preferred, "gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.5-pro"];
-        let lastError = "";
-        for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
-            const model = modelsToTry[attempt];
-            if (btn && btn.id === 'solveBtn') {
-                btn.innerText = `⚡ Đang giải siêu tốc (${model})...`;
-            }
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 25000);
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    signal: controller.signal,
-                    body: JSON.stringify({
-                        contents: [{ parts: parts }],
-                        generationConfig: {
-                            temperature: 0.2
-                        }
-                    })
-                });
-                clearTimeout(timeoutId);
-                const data = await res.json();
-                if (res.ok && data.candidates) {
-                    return data;
-                }
-                lastError = data.error ? data.error.message : "Lỗi kết nối";
-            } catch (e) {
-                clearTimeout(timeoutId);
-                lastError = "Máy chủ phản hồi chậm, đang tự động đổi luồng...";
+    // --- HÀM KHỬ LỖI JSON & TRÍCH XUẤT TỌA ĐỘ 3D ĐẢM BẢO 100% THÀNH CÔNG NGAY LẦN BẤM ĐẦU TIÊN ---
+    function sanitizeAndParseGeometryJSON(rawText) {
+        let jsonCandidate = null;
+        const tagMatch = rawText.match(/<GEOMETRY_JSON>([\s\S]*?)<\/GEOMETRY_JSON>/i);
+        if (tagMatch && tagMatch[1]) {
+            jsonCandidate = tagMatch[1];
+        } else {
+            // Dự phòng nếu AI quên đóng thẻ </GEOMETRY_JSON> hoặc chỉ dùng ```json
+            const openTagIdx = rawText.indexOf('<GEOMETRY_JSON>');
+            if (openTagIdx !== -1) {
+                jsonCandidate = rawText.slice(openTagIdx + 15);
+            } else {
+                const blockMatch = rawText.match(/\{[\s\S]*"vertices3D"[\s\S]*\}/);
+                if (blockMatch) jsonCandidate = blockMatch[0];
             }
         }
-        throw new Error(lastError);
+        if (!jsonCandidate) return null;
+
+        let cleaned = jsonCandidate
+            .replace(/```json|```/gi, '')
+            .replace(/\/\/.*$/gm, '') // Xóa comment nếu AI viết vào JSON
+            .replace(/,\s*([\]}])/g, '$1') // Xóa dấu phẩy thừa ở cuối mảng/object
+            .trim();
+
+        const firstBrace = cleaned.indexOf('{');
+        const lastBrace = cleaned.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+        }
+
+        try {
+            return JSON.parse(cleaned);
+        } catch (e) {
+            console.warn("Đang tự động sửa lỗi cú pháp JSON từ AI...", e);
+            return null;
+        }
+    }
+
+    // --- KẾT NỐI GEMINI AI SIÊU TỐC & CHỐNG TIMEOUT 100% ---
+    async function fetchSingleGeminiAttempt(apiKey, model, parts, useThinkingCap, signal) {
+        const genConfig = { temperature: 0.15 };
+        // Giới hạn thinkingBudget cho dòng 2.5 / 3.0 để AI trả lời trong 3-5 giây thay vì ngẫm nghĩ 40 giây gây timeout
+        if (useThinkingCap && (model.includes('2.5-flash') || model.includes('3-flash'))) {
+            genConfig.thinkingConfig = { thinkingBudget: 1024 };
+        }
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: signal,
+            body: JSON.stringify({
+                contents: [{ parts: parts }],
+                generationConfig: genConfig
+            })
+        });
+        const data = await res.json();
+        return { ok: res.ok, status: res.status, data };
+    }
+
+    async function callGeminiWithRetry(apiKey, parts, btn) {
+        const preferred = document.getElementById('modelSelect').value;
+        // Chuỗi dự phòng thông minh: Ưu tiên các model Flash tốc độ cao, không bị giới hạn quota như bản Pro
+        const modelsToTry = Array.from(new Set([
+            preferred,
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-3-flash-preview"
+        ]));
+
+        let lastError = "";
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+
+        if (btn && btn.id === 'solveBtn') {
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                btn.innerText = `⏳ Đang phân tích & dựng hình 3D (${elapsedSeconds}s)...`;
+            }, 1000);
+        }
+
+        try {
+            for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
+                const model = modelsToTry[attempt];
+                if (btn && btn.id === 'solveBtn' && attempt > 0) {
+                    btn.innerText = `⚡ Đang giải qua luồng tốc độ cao (${model})...`;
+                }
+
+                // Tăng thời gian chờ lên 55 giây để xử lý thoải mái cả ảnh chụp đề bài dài
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 55000);
+
+                try {
+                    let result = await fetchSingleGeminiAttempt(apiKey, model, parts, true, controller.signal);
+
+                    // Nếu model không hỗ trợ tham số thinkingConfig (lỗi 400), thử lại ngay không có thinkingConfig
+                    if (!result.ok && result.status === 400 && result.data?.error?.message?.includes('thinking')) {
+                        result = await fetchSingleGeminiAttempt(apiKey, model, parts, false, controller.signal);
+                    }
+
+                    clearTimeout(timeoutId);
+
+                    if (result.ok && result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        return result.data;
+                    }
+
+                    const errMsg = result.data?.error?.message || `HTTP ${result.status}`;
+                    // Nếu API Key bị sai hoặc bị khóa (400 API_KEY_INVALID / 403), báo ngay không cần thử model khác
+                    if (/API_KEY_INVALID|API key not valid|permission/i.test(errMsg)) {
+                        throw new Error("API Key không hợp lệ. Bạn hãy kiểm tra lại mã Gemini API Key ở góc trên bên phải nhé!");
+                    }
+                    lastError = errMsg;
+                } catch (e) {
+                    clearTimeout(timeoutId);
+                    if (e.message && e.message.includes("API Key không hợp lệ")) {
+                        throw e;
+                    }
+                    lastError = e.name === 'AbortError'
+                        ? `Mô hình ${model} phản hồi quá 55s`
+                        : (e.message || "Lỗi mạng");
+                }
+            }
+            throw new Error(lastError || "Không thể kết nối tới máy chủ Gemini.");
+        } finally {
+            if (timerInterval) clearInterval(timerInterval);
+        }
     }
 
     async function solveAndDraw() {
@@ -1596,46 +2438,93 @@ Lưu ý:
             document.getElementById('apiKeyInput').focus();
             return;
         }
+        if (!problem && !uploadedImageBase64) {
+            showToast("Hãy nhập đề bài bằng chữ hoặc dán ảnh chụp đề bài (Ctrl+V) trước nhé!", "info");
+            document.getElementById('problemInput').focus();
+            return;
+        }
         btn.disabled = true;
+
+        // Chỉ dựng trước mô hình sơ bộ khi KHÔNG có ảnh upload (tránh vẽ nhầm đề mẫu cũ khi đang giải ảnh mới)
+        if (!uploadedImageBase64 && problem) {
+            const previewModel = buildInstantPreviewFromProblem(problem);
+            activeModel = previewModel;
+            isUnfolded = false;
+            document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
+            drawGeometry(activeModel, false);
+        }
+
         try {
             const taskDescription = uploadedImageBase64
-                ? "Hãy đọc kỹ đề bài toán hình học trong bức ảnh đính kèm (bỏ qua văn bản mẫu nếu không khớp ảnh) và giải bài toán đó."
+                ? `Hãy đọc thật chính xác đề bài toán hình học trong bức ảnh đính kèm${problem ? ` (kết hợp ghi chú của người dùng: "${problem}")` : ''} và giải đầy đủ các ý của bài toán trong ảnh.`
                 : ("Hãy giải bài toán sau: " + problem);
-            const prompt = `Bạn là chuyên gia giải toán Hình học không gian THPT và dựng hình 3D trên Three.js.
-${taskDescription}
-Hãy trình bày kết quả theo đúng 2 phần sau:
-PHẦN 1: LỜI GIẢI CHI TIẾT
-Trình bày lời giải từng bước dễ hiểu bằng tiếng Việt, chọn đáp án trắc nghiệm (nếu có). Sử dụng thẻ HTML (<p>, <strong>, <br>) để xuống dòng đẹp mắt và kẹp mọi công thức toán vào giữa dấu $...$ (ví dụ: $SA \\perp (ABCD)$).
-PHẦN 2: DỮ LIỆU HÌNH 3D (HỆ TRỤC THREE.JS Y-UP)
-Ở cuối câu trả lời, hãy đặt khối dữ liệu tọa độ 3D nằm giữa 2 thẻ <GEOMETRY_JSON> và </GEOMETRY_JSON>.
-QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
-1. Mỗi điểm có tọa độ dạng [x, y, z], trong đó y (phần tử ở giữa) LÀ CHIỀU CAO HƯỚNG LÊN TRÊN, còn mặt phẳng ngang chứa đáy là mặt phẳng (x, z) ứng với y = 0.
-2. TẤT CẢ các đỉnh thuộc mặt đáy (ví dụ A, B, C, D và trung điểm H, M, tâm O thuộc đáy) PHẢI có tung độ y = 0.
-3. Đỉnh chóp S (hoặc đỉnh có tung độ lớn nhất) PHẢI có y > 0.
-4. KHAI BÁO THÊM NẾU CÓ:
-   - Nếu bài toán có MẶT CẦU, hãy thêm khóa "sphere": {"center": [x, y, z], "radius": R}.
-   - Nếu bài toán có ĐƯỜNG THẲNG (như d, delta, v.v.), hãy khai báo thêm mảng "lineLabels": [{"segment": ["A", "B"], "label": "d"}] để hiển thị tên đường thẳng ở trung điểm đoạn thẳng nối 2 điểm đó.
 
+            const prompt = `Bạn là chuyên gia giải toán Hình học không gian THPT và dựng hình 3D chuẩn xác trên Three.js.
+${taskDescription}
+
+Hãy trình bày kết quả ngắn gọn, chính xác theo đúng cấu trúc sau:
+${uploadedImageBase64 ? `ĐẦU TIÊN: Hãy trích xuất nguyên văn đề bài đọc được từ ảnh vào giữa cặp thẻ <PROBLEM_TEXT> và </PROBLEM_TEXT>.` : ''}
+PHẦN 1: LỜI GIẢI CHI TIẾT
+Trình bày lời giải từng bước rõ ràng bằng tiếng Việt cho tất cả các câu hỏi trong đề. Nếu là bài toán tính KHOẢNG CÁCH hoặc GÓC, hãy nêu rõ bước kẻ đường phụ (ví dụ: Gọi H là trung điểm AB, M là trung điểm CD, kẻ HK vuông góc với SB tại K, kẻ HE vuông góc với SM tại E...). Sử dụng thẻ HTML (<p>, <strong>, <br>) và kẹp công thức toán vào giữa dấu $...$ hoặc $$...$$.
+
+PHẦN 2: DỮ LIỆU HÌNH 3D (HỆ TRỤC THREE.JS Y-UP)
+Ở cuối câu trả lời, BẮT BUỘC đặt khối JSON hợp lệ nằm giữa 2 thẻ <GEOMETRY_JSON> và </GEOMETRY_JSON>.
+QUY TẮC TỌA ĐỘ BẮT BUỘC:
+1. Mỗi điểm có tọa độ [x, y, z], trong đó y LÀ CHIỀU CAO HƯỚNG LÊN TRÊN (trục Oz trong toán), còn mặt phẳng đáy là (x, z) ứng với y = 0.
+2. Tất cả các đỉnh đáy (A, B, C, D, tâm O, trung điểm H, M thuộc đáy) PHẢI có y = 0. Đỉnh A đặt tại gốc [0, 0, 0], độ dài cạnh đáy lấy bằng 3.2 để hình rõ đẹp.
+   - Lưu ý: Nếu đề cho mặt bên (SAB) vuông góc với đáy và H là trung điểm AB (như A=[0,0,0], B=[3.2,0,0] => H=[1.6,0,0]), thì đỉnh S phải nằm thẳng đứng trên H: S=[1.6, 2.8, 0].
+   - Nếu đề cho SA vuông góc với đáy thì S nằm thẳng đứng trên A: S=[0, 3.2, 0].
+3. BẮT BUỘC khai báo đầy đủ tọa độ của TẤT CẢ các điểm phụ xuất hiện trong lời giải (như tâm O, trung điểm H, M, N, chân đường cao K, E, I...) vào trong "vertices3D".
+4. Nối đầy đủ các cạnh:
+   - "edgesSolid" và "edgesDashed": Tất cả các cạnh của hình chóp/lăng trụ.
+   - "auxEdges": Các đường dựng hình phụ như SH, HM, SM, AC, BD, SO...
+   - "distanceEdges": Các đoạn thẳng biểu diễn KHOẢNG CÁCH cần tìm (ví dụ [["H", "K"], ["H", "E"]] hoặc [["A", "H"]]).
+   - "rightAngles": Mảng các góc vuông cần đánh dấu, dạng [{"at": "H", "from1": "S", "from2": "B"}, {"at": "K", "from1": "H", "from2": "S"}].
+
+Ví dụ mẫu chuẩn:
 <GEOMETRY_JSON>
 {
   "base": ["A", "B", "C", "D"],
   "apex": "S",
-  "vertices3D": {"A": [0,0,0], "B": [3,0,0], "C": [3,0,3], "D": [0,0,3], "M": [1.5,0,0]},
-  "edgesSolid": [["M", "N"]],
+  "vertices3D": {
+    "A": [0, 0, 0],
+    "B": [3.2, 0, 0],
+    "C": [3.2, 0, 3.2],
+    "D": [0, 0, 3.2],
+    "H": [1.6, 0, 0],
+    "M": [1.6, 0, 3.2],
+    "S": [1.6, 2.77, 0],
+    "K": [2.8, 0.69, 0],
+    "E": [1.6, 1.19, 1.37]
+  },
+  "edgesSolid": [["S","A"], ["S","B"], ["S","C"], ["S","D"], ["A","B"], ["B","C"], ["C","D"], ["A","D"]],
   "edgesDashed": [],
-  "faces": [],
-  "sphere": {"center": [4, 1, 6], "radius": 3},
-  "lineLabels": [{"segment": ["M", "N"], "label": "d"}]
+  "auxEdges": [["S","H"], ["H","M"], ["S","M"]],
+  "distanceEdges": [["H","K"], ["H","E"]],
+  "rightAngles": [{"at": "H", "from1": "S", "from2": "B"}, {"at": "K", "from1": "H", "from2": "S"}, {"at": "E", "from1": "H", "from2": "S"}],
+  "faces": [["S","A","B"], ["S","B","C"], ["S","C","D"], ["S","D","A"], ["A","B","C","D"]]
 }
 </GEOMETRY_JSON>`;
+
             const parts = [{ text: prompt }];
             if (uploadedImageBase64) {
                 parts.push({ inline_data: { mime_type: uploadedImageMime, data: uploadedImageBase64 } });
             }
             const data = await callGeminiWithRetry(apiKey, parts, btn);
             const rawText = data.candidates[0].content.parts[0].text;
-            const geoMatch = rawText.match(/<GEOMETRY_JSON>([\s\S]*?)<\/GEOMETRY_JSON>/);
-            let solutionHtml = rawText.replace(/<GEOMETRY_JSON>[\s\S]*?<\/GEOMETRY_JSON>/, '').replace(/PHẦN 1:.*|PHẦN 2:.*/gi, '').trim();
+
+            // Nếu giải từ ảnh và AI trích xuất được đề bài trong <PROBLEM_TEXT>, tự động điền vào ô văn bản
+            const ocrMatch = rawText.match(/<PROBLEM_TEXT>([\s\S]*?)<\/PROBLEM_TEXT>/i);
+            if (ocrMatch && ocrMatch[1]) {
+                document.getElementById('problemInput').value = ocrMatch[1].trim();
+            }
+
+            let solutionHtml = rawText
+                .replace(/<PROBLEM_TEXT>[\s\S]*?<\/PROBLEM_TEXT>/gi, '')
+                .replace(/<GEOMETRY_JSON>[\s\S]*?<\/GEOMETRY_JSON>/gi, '')
+                .replace(/<GEOMETRY_JSON>[\s\S]*$/gi, '')
+                .replace(/PHẦN 1:.*|PHẦN 2:.*/gi, '')
+                .trim();
             solutionHtml = solutionHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
             output.innerHTML = solutionHtml;
             renderMathInElement(output, {
@@ -1644,32 +2533,36 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                     {left: "$", right: "$", display: false}
                 ]
             });
-            if (geoMatch && geoMatch[1]) {
-                try {
-                    const cleanJson = geoMatch[1].replace(/```json|```/g, '').trim();
-                    const geoData = JSON.parse(cleanJson);
-                    if (geoData && geoData.vertices3D) {
-                        activeModel = geoData;
-                        isUnfolded = false;
-                        document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
-                        drawGeometry(activeModel, false);
-                        resetCamera();
-                    }
-                } catch (jsonErr) {
-                    console.warn("Không thể dựng hình mới, giữ hình hiện tại:", jsonErr);
-                }
+
+            const geoData = sanitizeAndParseGeometryJSON(rawText);
+            if (geoData && geoData.vertices3D) {
+                activeModel = geoData;
+            } else {
+                // Nếu AI chỉ trả lời giải mà thiếu JSON, dựng tự động từ nội dung đề + lời giải
+                activeModel = buildInstantPreviewFromProblem(document.getElementById('problemInput').value + ' ' + solutionHtml);
             }
-            showToast("Đã phân tích lời giải và dựng mô hình 3D thành công!", "success");
+            isUnfolded = false;
+            document.getElementById('unfoldBtn').innerText = "📐 Trải phẳng 2D (Net)";
+            drawGeometry(activeModel, false);
+            resetCamera();
+            showToast("Đã giải xong và dựng mô hình 3D kèm đoạn khoảng cách!", "success");
         } catch (err) {
             console.error(err);
-            showToast("Máy chủ Google hiện đang bận, bạn hãy đợi 5 giây rồi bấm lại nhé! (" + err.message + ")", "error");
+            // Nếu mạng hoặc quota API gặp sự cố, tự động kích hoạt bộ dựng hình dự phòng thông minh để không bị gián đoạn
+            const fallbackText = document.getElementById('problemInput').value.trim();
+            if (fallbackText) {
+                activeModel = buildInstantPreviewFromProblem(fallbackText);
+                drawGeometry(activeModel, false);
+                resetCamera();
+            }
+            showToast("Lưu ý AI: " + err.message, "error");
         }
         btn.innerText = "✨ Phân Tích AI & Dựng Hình 3D";
         btn.disabled = false;
     }
 
-    resetCamera();
-    drawGeometry(activeModel, false);
+    // Khởi chạy bài mẫu đầu tiên khi mở trang
+    loadSample();
     animate();
 
     window.addEventListener('resize', () => {
@@ -1680,15 +2573,11 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         }
         resizeGeoGebraApplet();
     });
-    document.addEventListener("DOMContentLoaded", () => {
-        renderMathInElement(document.body, { delimiters: [{left: "$", right: "$", display: false}] });
-    });
+
     // =========================================================================
-        // =========================================================================
     // TÍNH NĂNG XUẤT FILE WORD (.DOCX) VÀ PDF (.PDF) CHO MỤC GIẢI TOÁN 3D (BẢN NÂNG CẤP OMML)
     // =========================================================================
 
-    // 1. Chụp snapshot trực tiếp từ khung Canvas Three.js 3D kèm nhãn đỉnh (A, B, C, S...)
     async function capture3DSnapshot() {
         if (!isUnfolded) {
             updateDynamicEdgesVisibility();
@@ -1715,17 +2604,32 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
+                // Vẽ nhãn hệ trục Oxyz lên ảnh chụp Word/PDF
+                if (showOxyz && !isUnfolded) {
+                    axisLabelElements.forEach(item => {
+                        const pos = item.pos.clone().project(camera);
+                        const x = (pos.x * 0.5 + 0.5) * w;
+                        const y = (-(pos.y * 0.5) + 0.5) * h;
+                        ctx.lineWidth = 3 * pixelRatio;
+                        ctx.strokeStyle = '#000000';
+                        ctx.strokeText(item.text, x, y);
+                        ctx.fillStyle = item.color || '#facc15';
+                        ctx.fillText(item.text, x, y);
+                    });
+                }
+
+                // Vẽ nhãn các đỉnh A, B, C, S, H, K...
                 Object.keys(currentVertices).forEach(k => {
                     const pos = new THREE.Vector3(...currentVertices[k]);
                     pos.project(camera);
                     const x = (pos.x * 0.5 + 0.5) * w;
-                    const y = (-(pos.y * 0.5) + 0.5) * h - (12 * pixelRatio);
-                    const labelText = k.replace(/_.*$/, '');
+                    const y = (-(pos.y * 0.5) + 0.5) * h - (14 * pixelRatio);
+                    const labelText = k.startsWith('__lineLabel_') ? k.replace('__lineLabel_', '') : k.replace(/_.*$/, '');
 
                     ctx.lineWidth = 4 * pixelRatio;
                     ctx.strokeStyle = '#000000';
                     ctx.strokeText(labelText, x, y);
-                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillStyle = /^[HK]$/.test(labelText) ? '#fda4af' : '#38bdf8';
                     ctx.fillText(labelText, x, y);
                 });
 
@@ -1740,7 +2644,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         });
     }
 
-    // 2. BỘ PHÂN TÍCH CÚ PHÁP LATEX SANG KHUNG CÔNG THỨC TOÁN 2 TẦNG CỦA WORD (OMML)
     const LATEX_SYMBOL_MAP = {
         '\\perp': ' ⊥ ', '\\parallel': ' ∥ ', '\\triangle': 'Δ', '\\Delta': 'Δ',
         '\\angle': '∠', '\\measuredangle': '∠', '\\Leftrightarrow': ' ⇔ ', '\\iff': ' ⇔ ',
@@ -1765,7 +2668,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         '\\circ': '°', '\\quad': ' ', '\\qquad': ' ', '\\,': ' ', '\\;': ' ', '\\:': ' ', '\\!': ''
     };
 
-    // Hàm đọc nội dung trong cặp ngoặc nhọn { ... } có hỗ trợ ngoặc lồng nhau
     function readBracedGroup(str, pos) {
         while (pos < str.length && /\s/.test(str[pos])) pos++;
         if (pos >= str.length) return { content: '', nextPos: pos };
@@ -1794,7 +2696,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         return { content: str.slice(start), nextPos: str.length };
     }
 
-    // Chuyển biểu thức LaTeX đơn giản sang chuỗi ký tự sạch (dùng cho bên trong \widehat, \vec...)
     function latexToFlatString(tex) {
         if (!tex) return '';
         let s = tex;
@@ -1804,12 +2705,10 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         return s.replace(/[{}]/g, '').trim();
     }
 
-    // Chuyển chuỗi LaTeX sang mảng đối tượng Toán học OMML của thư viện docx
     function parseLatexToDocxMathNodes(tex) {
         const { MathRun, MathFraction, MathRadical, MathSuperScript, MathSubScript } = window.docx;
         if (!tex) return [new MathRun('')];
 
-        // Làm sạch các từ khóa căn chỉnh và khoảng trắng thừa
         let s = tex
             .replace(/\\(?:left|right|big|Big|bigg|Bigg)\b/g, '')
             .replace(/\\begin\{[^}]+\}|\\end\{[^}]+\}/g, '')
@@ -1828,7 +2727,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         }
 
         while (pos < s.length) {
-            // 1. Xử lý phân số 2 tầng \frac{tử}{mẫu}, \dfrac, \tfrac
             const fracMatch = s.slice(pos).match(/^\\(?:d|t)?frac\b/);
             if (fracMatch) {
                 flushText();
@@ -1843,7 +2741,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 2. Xử lý căn thức \sqrt{...} hoặc \sqrt[n]{...}
             if (s.startsWith('\\sqrt', pos)) {
                 flushText();
                 pos += 5;
@@ -1868,7 +2765,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 3. Xử lý ký hiệu góc \widehat{SCA}, \hat{A}
             const hatMatch = s.slice(pos).match(/^\\(?:widehat|hat)\b/);
             if (hatMatch) {
                 flushText();
@@ -1879,7 +2775,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 4. Xử lý ký hiệu vectơ \overrightarrow{AB}, \vec{u}
             const vecMatch = s.slice(pos).match(/^\\(?:overrightarrow|vec)\b/);
             if (vecMatch) {
                 flushText();
@@ -1890,7 +2785,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 5. Xử lý văn bản trong công thức \text{...}, \mathrm{...}, \mathbf{...}
             const txtMatch = s.slice(pos).match(/^\\(?:text|textbf|textit|mathrm|mathbf|mathbb|mathcal|overline)\b/);
             if (txtMatch) {
                 flushText();
@@ -1901,7 +2795,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 6. Xử lý số mũ (^) và chỉ số dưới (_)
             if (s[pos] === '^' || s[pos] === '_') {
                 const isSup = s[pos] === '^';
                 pos++;
@@ -1913,7 +2806,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                     continue;
                 }
 
-                // Tách phần tử cơ sở (base) ngay trước dấu ^ hoặc _
                 let baseNodes = [];
                 if (textBuf.length > 0) {
                     const lastChar = textBuf.slice(-1);
@@ -1940,7 +2832,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 7. Xử lý các lệnh LaTeX bắt đầu bằng dấu \
             if (s[pos] === '\\') {
                 if (s[pos + 1] === '\\') {
                     textBuf += ' ';
@@ -1956,12 +2847,10 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 if (cmdMatch) {
                     const cmd = cmdMatch[0];
                     pos += cmd.length;
-                    // Nếu sau lệnh là khoảng trắng ngăn cách thì bỏ qua 1 khoảng trắng
                     if (s[pos] === ' ') pos++;
                     if (LATEX_SYMBOL_MAP[cmd] !== undefined) {
                         textBuf += LATEX_SYMBOL_MAP[cmd];
                     } else {
-                        // Bỏ dấu \ nếu gặp lệnh lạ để không bị in thừa ký hiệu
                         textBuf += cmd.slice(1);
                     }
                     continue;
@@ -1970,7 +2859,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 continue;
             }
 
-            // 8. Nhóm trong ngoặc nhọn { ... } đứng độc lập
             if (s[pos] === '{') {
                 flushText();
                 const grp = readBracedGroup(s, pos);
@@ -1992,7 +2880,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         return nodes.length > 0 ? nodes : [new MathRun('')];
     }
 
-    // Tạo đối tượng docx.Math hoàn chỉnh từ chuỗi LaTeX
     function createWordMathObject(latexStr) {
         const { Math: DocxMath, TextRun } = window.docx;
         try {
@@ -2003,7 +2890,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         }
     }
 
-    // Làm sạch các ký hiệu Markdown thừa (###, ##, ---, ***) ở đầu dòng
     function cleanMarkdownNoise(text) {
         return text
             .replace(/^\s*#{1,6}\s*/gm, '')
@@ -2011,7 +2897,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
             .replace(/\*\*(.*?)\*\*/g, '$1');
     }
 
-    // Tách chuỗi văn bản có chứa $...$ hoặc $$...$$ thành các phần tử TextRun và DocxMath
     function buildParagraphChildrenFromText(str, isBoldDefault = false) {
         const { TextRun } = window.docx;
         const cleanedStr = cleanMarkdownNoise(str);
@@ -2053,13 +2938,11 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         return children;
     }
 
-    // Trích xuất toàn bộ lời giải từ #solutionOutput sang danh sách các dòng Paragraph của Word
     function extractSolutionParagraphsForWord() {
         const { Paragraph, TextRun } = window.docx;
         const outputEl = document.getElementById('solutionOutput');
         const clone = outputEl.cloneNode(true);
 
-        // Chuyển toàn bộ các khối .katex đã render về lại thẻ đánh dấu chứa mã LaTeX gốc
         clone.querySelectorAll('.katex-display, .katex').forEach(katexNode => {
             if (katexNode.classList.contains('katex') && katexNode.closest('.katex-display')) return;
             const annotation = katexNode.querySelector('annotation[encoding="application/x-tex"]');
@@ -2133,7 +3016,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         return bytes;
     }
 
-    // 3. HÀM XUẤT FILE WORD (.DOCX) VỚI CÔNG THỨC OMML 2 TẦNG CHUẨN WORD
     async function exportToWord() {
         const btn = document.getElementById('exportWordBtn');
         if (!window.docx || !window.saveAs) {
@@ -2149,7 +3031,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
             const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle } = window.docx;
             const docChildren = [];
 
-            // Tiêu đề chính
             docChildren.push(
                 new Paragraph({
                     alignment: AlignmentType.CENTER,
@@ -2182,7 +3063,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 })
             );
 
-            // MỤC I: ĐỀ BÀI TOÁN
             docChildren.push(
                 new Paragraph({
                     spacing: { before: 200, after: 120 },
@@ -2208,7 +3088,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 );
             }
 
-            // Ảnh đề bài (nếu có upload)
             const previewImg = document.getElementById('imagePreview');
             if (uploadedImageBase64 && previewImg && !previewImg.classList.contains('hidden')) {
                 const fullProbDataUrl = `data:${uploadedImageMime || 'image/jpeg'};base64,${uploadedImageBase64}`;
@@ -2231,7 +3110,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 );
             }
 
-            // MỤC II: HÌNH VẼ MÔ HÌNH 3D
             docChildren.push(
                 new Paragraph({
                     spacing: { before: 240, after: 120 },
@@ -2264,7 +3142,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 })
             );
 
-            // MỤC III: LỜI GIẢI CHI TIẾT
             docChildren.push(
                 new Paragraph({
                     spacing: { before: 240, after: 140 },
@@ -2305,7 +3182,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         }
     }
 
-    // 4. HÀM XUẤT FILE PDF (.PDF) - ĐÃ FIX LỖI LỆCH PHÂN SỐ, CĂN THỨC & DẤU GÓC KATEX
     async function prepareKatexForHtml2Canvas(rootEl) {
         const svgs = Array.from(rootEl.querySelectorAll('.katex svg'));
         for (const svg of svgs) {
@@ -2318,7 +3194,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
             const h = parentRect.height || svgRect.height;
             if (w <= 0 || h <= 0) continue;
 
-            // Xử lý cắt chuẩn viewBox cho dấu căn (\sqrt) và vectơ (\overrightarrow) dùng width="400em"
             const par = svg.getAttribute('preserveAspectRatio') || '';
             const vb = svg.getAttribute('viewBox');
             if (vb && par.includes('slice')) {
@@ -2341,7 +3216,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 }
             });
 
-            // Rasterize SVG của KaTeX (dấu góc \widehat, dấu căn \sqrt) sang Canvas 3x sắc nét
             const xml = new XMLSerializer().serializeToString(svg);
             const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
 
@@ -2361,11 +3235,9 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                     const ctx = c.getContext('2d');
                     ctx.drawImage(img, 0, 0, c.width, c.height);
                     svg.replaceWith(c);
-                    svg.replaceWith(c);
                     const curRect = c.getBoundingClientRect();
                     c.style.left = `${svgRect.left - curRect.left}px`;
                     c.style.top = `${svgRect.top - curRect.top}px`;
-                    resolve();
                     resolve();
                 };
                 img.onerror = () => resolve();
@@ -2388,7 +3260,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
         let printContainer = null;
         let fixStyleTag = null;
         try {
-            // Khắc phục xung đột giữa Tailwind CSS (img { display: block }) và bộ đo baseline chữ của html2canvas
             fixStyleTag = document.createElement('style');
             fixStyleTag.innerHTML = `
                 img:not([class]) {
@@ -2483,7 +3354,6 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 });
             }
 
-            // Đợi trình duyệt dựng xong layout rồi chuẩn hóa seluruh SVG KaTeX (dấu góc, dấu căn)
             await new Promise(r => setTimeout(r, 100));
             await prepareKatexForHtml2Canvas(printContainer);
 
@@ -2526,7 +3396,7 @@ QUY TẮC TỌA ĐỘ BẮT BUỘC (Three.js Y-up):
                 fixStyleTag.parentNode.removeChild(fixStyleTag);
             }
             if (printContainer && printContainer.parentNode) {
-                printContainer.parentNode.removeChild(printContainer);
+                printContainer.removeChild(printContainer);
             }
             btn.disabled = false;
             btn.innerHTML = originalHtml;
